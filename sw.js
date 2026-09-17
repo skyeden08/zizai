@@ -1,4 +1,4 @@
-const CACHE_NAME = "zizai-shell-v3";
+const CACHE_NAME = "zizai-shell-v4";
 const SHELL_FILES = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -23,6 +23,17 @@ self.addEventListener("fetch", (event) => {
   const url = event.request.url;
   if (url.includes("googleapis.com") || url.includes("accounts.google.com") || url.includes("api.github.com")) {
     return; // 不攔截，直接放行給網路
+  }
+  // index.html：優先網路，避免模型名稱等更新被舊快取卡住
+  if (url.endsWith("/") || url.endsWith("/index.html") || url.endsWith("/zizai/") || url.endsWith("/zizai")) {
+    event.respondWith(
+      fetch(event.request).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return res;
+      }).catch(() => caches.match(event.request))
+    );
+    return;
   }
   event.respondWith(
     caches.match(event.request).then((cached) => cached || fetch(event.request))
