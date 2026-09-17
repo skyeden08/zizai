@@ -81,25 +81,6 @@
   }
   .status .dot.on{ background:var(--jade); }
   .status .dot.err{ background:var(--warn); }
-  .ai-bar{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    font-size:11px;
-    color:var(--ink-soft);
-  }
-  .ai-bar .ai-chip{
-    display:inline-flex;
-    align-items:center;
-    gap:4px;
-    padding:2px 7px;
-    border:1px solid var(--line);
-    border-radius:10px;
-    background:var(--panel);
-    white-space:nowrap;
-  }
-  .ai-bar .ai-chip .s-done{ color:var(--jade-deep); font-weight:500; }
-  .ai-bar .ai-chip .s-off{ color:#A8A398; }
   #signinBtn{
     display:flex;
     align-items:center;
@@ -205,19 +186,38 @@
     color:#9A968A;
   }
 
-  /* ---------- 協作區 (AI status) ---------- */
-  .collab-section{
-    margin-bottom:14px;
-    padding-bottom:12px;
-    border-bottom:1px solid var(--line);
-  }
-  .collab-section h3{
-    font-family:var(--serif);
-    font-size:12px;
-    font-weight:600;
+  /* ---------- 輔助區選項：協作 ---------- */
+  .aux-option{
     margin-bottom:8px;
-    color:var(--ink);
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:var(--panel);
+    overflow:hidden;
   }
+  .aux-option-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:8px 10px;
+    cursor:pointer;
+    font-size:12px;
+    font-weight:500;
+    color:var(--ink);
+    user-select:none;
+  }
+  .aux-option-head:hover{ background:var(--jade-dim); }
+  .aux-option-head .opt-arrow{
+    font-size:11px;
+    color:var(--ink-soft);
+    transition:transform .15s ease;
+  }
+  .aux-option.open .opt-arrow{ transform:rotate(90deg); }
+  .aux-option-body{
+    display:none;
+    padding:6px 10px 10px;
+    border-top:1px solid var(--line);
+  }
+  .aux-option.open .aux-option-body{ display:block; }
   .ai-status-list{
     list-style:none;
   }
@@ -236,11 +236,8 @@
   .ai-status-list .ai-state{
     font-size:11px;
   }
-  .ai-status-list .ai-state.done{ color:var(--jade-deep); }
+  .ai-status-list .ai-state.on{ color:var(--jade-deep); }
   .ai-status-list .ai-state.off{ color:#A8A398; }
-  .ai-status-list .ai-state.ready{ color:var(--jade); }
-  .ai-status-list .ai-state.running{ color:#B8860B; }
-  .ai-status-list .ai-state.error{ color:var(--warn); }
 
   /* ---------- 對話區 (chat) ---------- */
   #chatScroll{
@@ -350,12 +347,6 @@
       <span class="tag">主體 · 自在</span>
     </div>
     <div class="status">
-      <div class="ai-bar" id="aiBar" title="協作區 · AI 狀態">
-        <span class="ai-chip">Grok <span class="s-done">完成</span></span>
-        <span class="ai-chip">Claude <span class="s-off">未接入</span></span>
-        <span class="ai-chip">ChatGPT <span class="s-off">未接入</span></span>
-        <span class="ai-chip">Gemini <span class="s-off">未接入</span></span>
-      </div>
       <span id="githubStatus"><span class="dot" id="githubDot"></span>尚未登入</span>
       <span id="driveStatus"><span class="dot" id="driveDot"></span>備份未連線</span>
       <div id="signinBtn"></div>
@@ -376,14 +367,19 @@
         <button class="fold-btn" onclick="toggleFold('aux')">‹</button>
       </div>
       <div class="panel-body" id="logBody">
-        <div class="collab-section" id="collabArea">
-          <h3>協作區</h3>
-          <ul class="ai-status-list">
-            <li><span class="ai-name">Grok</span><span class="ai-state done">完成</span></li>
-            <li><span class="ai-name">Claude</span><span class="ai-state off">未接入</span></li>
-            <li><span class="ai-name">ChatGPT</span><span class="ai-state off">未接入</span></li>
-            <li><span class="ai-name">Gemini</span><span class="ai-state off">未接入</span></li>
-          </ul>
+        <div class="aux-option" id="collabOption">
+          <div class="aux-option-head" onclick="toggleAuxOption('collabOption')">
+            <span>協作</span>
+            <span class="opt-arrow">›</span>
+          </div>
+          <div class="aux-option-body">
+            <ul class="ai-status-list">
+              <li><span class="ai-name">Grok</span><span class="ai-state on">已接入</span></li>
+              <li><span class="ai-name">Claude</span><span class="ai-state off">未接入</span></li>
+              <li><span class="ai-name">ChatGPT</span><span class="ai-state off">未接入</span></li>
+              <li><span class="ai-name">Gemini</span><span class="ai-state off">未接入</span></li>
+            </ul>
+          </div>
         </div>
         <p class="empty-hint">系統歷程將顯示於此</p>
       </div>
@@ -663,6 +659,10 @@ function renderHistoryToLog() {
   zizaiState.歷程.slice().reverse().forEach(item => {
     appendLogDom(item.text || JSON.stringify(item), item.time ? new Date(item.time).toLocaleTimeString("zh-TW", { hour12: false }) : "");
   });
+}
+
+function toggleAuxOption(id) {
+  document.getElementById(id).classList.toggle("open");
 }
 
 function toggleFold(id) {
