@@ -186,6 +186,43 @@
     color:#9A968A;
   }
 
+  /* ---------- 協作區 (AI status) ---------- */
+  .collab-section{
+    margin-bottom:14px;
+    padding-bottom:12px;
+    border-bottom:1px solid var(--line);
+  }
+  .collab-section h3{
+    font-family:var(--serif);
+    font-size:12px;
+    font-weight:600;
+    margin-bottom:8px;
+    color:var(--ink);
+  }
+  .ai-status-list{
+    list-style:none;
+  }
+  .ai-status-list li{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-size:12px;
+    padding:4px 0;
+    color:var(--ink-soft);
+  }
+  .ai-status-list .ai-name{
+    font-weight:500;
+    color:var(--ink);
+  }
+  .ai-status-list .ai-state{
+    font-size:11px;
+  }
+  .ai-status-list .ai-state.done{ color:var(--jade-deep); }
+  .ai-status-list .ai-state.off{ color:#A8A398; }
+  .ai-status-list .ai-state.ready{ color:var(--jade); }
+  .ai-status-list .ai-state.running{ color:#B8860B; }
+  .ai-status-list .ai-state.error{ color:var(--warn); }
+
   /* ---------- 對話區 (chat) ---------- */
   #chatScroll{
     display:flex;
@@ -314,6 +351,15 @@
         <button class="fold-btn" onclick="toggleFold('aux')">‹</button>
       </div>
       <div class="panel-body" id="logBody">
+        <div class="collab-section" id="collabArea">
+          <h3>協作區</h3>
+          <ul class="ai-status-list">
+            <li><span class="ai-name">Grok</span><span class="ai-state done">完成</span></li>
+            <li><span class="ai-name">Claude</span><span class="ai-state off">未接入</span></li>
+            <li><span class="ai-name">ChatGPT</span><span class="ai-state off">未接入</span></li>
+            <li><span class="ai-name">Gemini</span><span class="ai-state off">未接入</span></li>
+          </ul>
+        </div>
         <p class="empty-hint">系統歷程將顯示於此</p>
       </div>
     </section>
@@ -589,53 +635,41 @@ async function createDriveBackupFile() {
 async function backupToDrive() {
   if (!accessToken || !stateFileId) return; // 備份未連線時安靜跳過，不影響GitHub正本流程
   try {
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${stateFileId}?uploadType=media`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify(zizaiState)
-    });
-    setDriveStatus(true, "備份已同步");
-  } catch (e) {
-    setDriveStatus(true, "備份同步失敗，稍後重試"); // GitHub正本已成功，備份失敗僅提示不視為錯誤
-  }
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${stateFileId}?uploadType=media`,
+      { method: "PATCH", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(zizaiState) });
+  } catch (e) { /* 備份失敗不影響主流程 */ }
 }
 
 function renderHistoryToLog() {
+  if (!zizaiState.歷程 || !zizaiState.歷程.length) return;
   const body = document.getElementById("logBody");
-  if (zizaiState.歷程.length === 0) return;
-  body.innerHTML = "";
-  zizaiState.歷程.slice(-30).forEach(item => {
-    const t = new Date(item.time);
-    const label = isNaN(t) ? item.time : t.toLocaleString("zh-TW", { hour12: false });
-    appendLogDom(item.text, label);
+  // keep collab section
+  zizaiState.歷程.slice().reverse().forEach(item => {
+    appendLogDom(item.text || JSON.stringify(item), item.time ? new Date(item.time).toLocaleTimeString("zh-TW", { hour12: false }) : "");
   });
 }
 
-/* =========================================================
-   4.1.3 摺疊機制
-   ========================================================= */
 function toggleFold(id) {
   document.getElementById(id).classList.toggle("collapsed");
 }
 
-/* =========================================================
-   4.1.4 拖曳調整
-   ========================================================= */
 function makeResizable() {
   document.querySelectorAll(".resizer").forEach(bar => {
-    bar.addEventListener("mousedown", (e) => {
+    bar.addEventListener("mousedown", e => {
       e.preventDefault();
       bar.classList.add("active");
-      const leftEl = document.getElementById(bar.dataset.left);
-      const rightEl = document.getElementById(bar.dataset.right);
+      const leftId = bar.dataset.left;
+      const rightId = bar.dataset.right;
+      const leftEl = document.getElementById(leftId);
+      const rightEl = document.getElementById(rightId);
       const startX = e.clientX;
-      const leftStart = leftEl.getBoundingClientRect().width;
-      const rightStart = rightEl.getBoundingClientRect().width;
-
+      const startLeft = leftEl.getBoundingClientRect().width;
+      const startRight = rightEl.getBoundingClientRect().width;
       function onMove(ev) {
         const dx = ev.clientX - startX;
-        const newLeft = Math.max(80, leftStart + dx);
-        const newRight = Math.max(80, rightStart - dx);
+        let newLeft = Math.max(40, startLeft + dx);
+        let newRight = Math.max(40, startRight - dx);
         leftEl.style.flex = `0 0 ${newLeft}px`;
         rightEl.style.flex = rightEl.id === "chat" ? "1 1 auto" : `0 0 ${newRight}px`;
       }
