@@ -81,6 +81,25 @@
   }
   .status .dot.on{ background:var(--jade); }
   .status .dot.err{ background:var(--warn); }
+  .ai-bar{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+  .ai-bar .ai-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:2px 7px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--panel);
+    white-space:nowrap;
+  }
+  .ai-bar .ai-chip .s-done{ color:var(--jade-deep); font-weight:500; }
+  .ai-bar .ai-chip .s-off{ color:#A8A398; }
   #signinBtn{
     display:flex;
     align-items:center;
@@ -331,6 +350,12 @@
       <span class="tag">主體 · 自在</span>
     </div>
     <div class="status">
+      <div class="ai-bar" id="aiBar" title="協作區 · AI 狀態">
+        <span class="ai-chip">Grok <span class="s-done">完成</span></span>
+        <span class="ai-chip">Claude <span class="s-off">未接入</span></span>
+        <span class="ai-chip">ChatGPT <span class="s-off">未接入</span></span>
+        <span class="ai-chip">Gemini <span class="s-off">未接入</span></span>
+      </div>
       <span id="githubStatus"><span class="dot" id="githubDot"></span>尚未登入</span>
       <span id="driveStatus"><span class="dot" id="driveDot"></span>備份未連線</span>
       <div id="signinBtn"></div>
@@ -415,16 +440,14 @@ const STATE_FILENAME = "zizai_state.json";
 let accessToken = null;
 let stateFileId = null;
 let tokenClient = null;
-let githubSha = null;    // 更新既有檔案時，GitHub要求附上目前版本的sha
-let githubToken = null;  // 從Drive讀取後存於記憶體，不寫入程式碼
+let githubSha = null;
+let githubToken = null;
 
-/* 現況／歷程 記憶體物件；正本對齊 GitHub 上的 GITHUB_PATH */
 let zizaiState = {
   現況: { 定位AI: null, 最後更新: null },
   歷程: []
 };
 
-/* UTF-8 安全的 base64 編／解碼（中文內容必須用這組，不能直接btoa/atob） */
 function utf8ToBase64(str) {
   const bytes = new TextEncoder().encode(str);
   let binary = "";
@@ -460,17 +483,14 @@ window.onload = () => {
     callback: async (resp) => {
       if (resp.error) { setDriveStatus(false, "授權失敗"); return; }
       accessToken = resp.access_token;
-      await loadGithubTokenFromDrive(); // 密鑰就緒後，內部會接著讀取GitHub正本
-      await loadDriveFileId();          // 順便備份連線
+      await loadGithubTokenFromDrive();
+      await loadDriveFileId();
     }
   });
 
   makeResizable();
 };
 
-
-/* 登入後用來取得GitHub密鑰（存於使用者Drive）與Drive備份授權；
-   授權需使用者主動點擊按鈕才觸發，避免彈窗被瀏覽器攔截 */
 function handleCredential(resp) {
   const payload = parseJwt(resp.credential);
   document.getElementById("userAvatar").src = payload.picture || "";
@@ -515,7 +535,6 @@ function setGithubStatus(ok, label) {
   document.getElementById("githubStatus").lastChild.textContent = label;
 }
 
-/* ---- GitHub Token：存於使用者Google Drive的私人檔案，不進入git倉庫 ---- */
 async function loadGithubTokenFromDrive() {
   setGithubStatus(false, "讀取密鑰中…");
   try {
@@ -550,7 +569,6 @@ async function saveGithubTokenToDrive(token) {
     { method: "POST", headers: { Authorization: `Bearer ${accessToken}` }, body: form });
 }
 
-/* ---- GitHub：正本讀寫（2.6.1.1／4.1.6） ---- */
 async function loadStateFromGitHub() {
   if (!githubToken) { setGithubStatus(false, "尚未設定密鑰"); return; }
   try {
@@ -563,7 +581,7 @@ async function loadStateFromGitHub() {
       zizaiState = JSON.parse(base64ToUtf8(data.content));
       addLog("已從 GitHub 讀取現況／歷程");
     } else if (res.status === 404) {
-      await saveStateToGitHub(); // 倉庫內尚無檔案，建立初始版本
+      await saveStateToGitHub();
       addLog("GitHub無現存檔案，已建立新的現況／歷程");
     } else if (res.status === 401) {
       throw new Error("密鑰無效或已被撤銷，請重新設定");
@@ -600,7 +618,6 @@ async function saveStateToGitHub() {
   }
 }
 
-/* ---- Google Drive：備份，僅登入後才寫入，失敗不影響主流程 ---- */
 async function loadDriveFileId() {
   setDriveStatus(false, "連接中…");
   try {
@@ -615,7 +632,7 @@ async function loadDriveFileId() {
     }
     setDriveStatus(true, "備份已連線");
     document.getElementById("connectDriveBtn").style.display = "none";
-    await backupToDrive(); // 連上後立即備份一次目前的正本內容
+    await backupToDrive();
   } catch (e) {
     setDriveStatus(false, "備份連線失敗");
   }
@@ -633,18 +650,16 @@ async function createDriveBackupFile() {
 }
 
 async function backupToDrive() {
-  if (!accessToken || !stateFileId) return; // 備份未連線時安靜跳過，不影響GitHub正本流程
+  if (!accessToken || !stateFileId) return;
   try {
     await fetch(`https://www.googleapis.com/upload/drive/v3/files/${stateFileId}?uploadType=media`,
       { method: "PATCH", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify(zizaiState) });
-  } catch (e) { /* 備份失敗不影響主流程 */ }
+  } catch (e) {}
 }
 
 function renderHistoryToLog() {
   if (!zizaiState.歷程 || !zizaiState.歷程.length) return;
-  const body = document.getElementById("logBody");
-  // keep collab section
   zizaiState.歷程.slice().reverse().forEach(item => {
     appendLogDom(item.text || JSON.stringify(item), item.time ? new Date(item.time).toLocaleTimeString("zh-TW", { hour12: false }) : "");
   });
@@ -684,10 +699,6 @@ function makeResizable() {
   });
 }
 
-/* =========================================================
-   4.1.5 資料流：sendMessage() 為核心邏輯入口
-   1.3 運行模式：需求 → 定位 → 對位 → 執行 → 驗證 → 更新現況/歷程
-   ========================================================= */
 function sendMessage() {
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
@@ -697,7 +708,6 @@ function sendMessage() {
   addLog("使用者提出需求：" + text);
   input.value = "";
 
-  // 定位／對位／執行 —— 目前為主體UI骨架階段，AI運算單位尚未串接，先回應佔位訊息
   setTimeout(() => {
     const reply = "（尚未串接 AI 運算單位，此為主體UI骨架階段的佔位回應）";
     addBubble("ai", reply);
