@@ -106,6 +106,13 @@
   .result-card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:12px 14px; margin-bottom:10px; }
   .result-card h3{ font-family:var(--serif); font-size:12.5px; font-weight:600; margin-bottom:5px; }
   .result-card p{ font-size:12px; color:var(--ink-soft); line-height:1.6; }
+  .topic-badge{ font-size:11px; font-weight:400; color:var(--jade-deep); margin-left:8px; }
+  .topic-input{ width:100%; font-family:var(--sans); font-size:12px; border:1px solid var(--line); border-radius:5px; padding:7px 9px; background:var(--paper); color:var(--ink); margin-bottom:8px; }
+  .topic-input:focus{ outline:none; border-color:var(--jade); }
+  .topic-history{ display:flex; flex-direction:column; gap:4px; }
+  .topic-chip{ display:flex; align-items:center; justify-content:space-between; font-size:11.5px; padding:5px 8px; border-radius:4px; background:var(--paper); border:1px solid var(--line); cursor:pointer; color:var(--ink-soft); }
+  .topic-chip:hover{ border-color:var(--jade); color:var(--jade-deep); }
+  .topic-chip.current{ background:var(--jade-dim); border-color:var(--jade); color:var(--jade-deep); font-weight:500; }
   .empty-hint{ font-size:12px; color:#A8A398; text-align:center; padding:30px 10px; line-height:1.8; }
   ::-webkit-scrollbar{ width:7px; }
   ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:4px; }
@@ -151,6 +158,16 @@
               <li><span class="ai-name">ChatGPT</span><span class="ai-state off">未接入</span></li>
               <li><span class="ai-name">Gemini</span><span class="ai-state off" id="geminiStatus">未接入</span></li>
             </ul>
+          </div>
+        </div>
+        <div class="aux-option" id="topicOption">
+          <div class="aux-option-head" onclick="toggleAuxOption('topicOption')">
+            <span>目前主題<span class="topic-badge" id="topicBadge"></span></span>
+            <span class="opt-arrow">›</span>
+          </div>
+          <div class="aux-option-body">
+            <input type="text" id="topicInput" class="topic-input" placeholder="輸入目前對話主題，按 Enter 標記…">
+            <div id="topicHistoryList" class="topic-history"></div>
           </div>
         </div>
         <div class="aux-option" id="historyOption">
@@ -206,7 +223,7 @@ let githubToken = null;
 let geminiKey = null;
 let isSilentDriveCheck = false;
 let tokenExpiryTimer = null;
-let zizaiState = { 現況: { 定位AI: null, 最後更新: null }, 歷程: [] };
+let zizaiState = { 現況: { 定位AI: null, 最後更新: null }, 歷程: [], 主題: { 目前: "", 歷史: [] } };
 function utf8ToBase64(str) {
   const bytes = new TextEncoder().encode(str);
   let binary = "";
@@ -356,6 +373,7 @@ async function loadStateFromGitHub() {
       const data = await res.json();
       githubSha = data.sha;
       zizaiState = JSON.parse(base64ToUtf8(data.content));
+      if (!zizaiState.主題) zizaiState.主題 = { 目前: "", 歷史: [] };
       addLog("已從 GitHub 讀取現況／歷程");
     } else if (res.status === 404) {
       await saveStateToGitHub();
@@ -364,6 +382,7 @@ async function loadStateFromGitHub() {
     else { throw new Error("HTTP " + res.status); }
     setGithubStatus(true, "GitHub正常");
     renderHistoryToLog();
+    renderTopicUI();
   } catch (e) {
     setGithubStatus(false, "GitHub連線失敗");
     addLog("錯誤：無法連線 GitHub（" + e.message + "）");
@@ -415,6 +434,35 @@ function renderHistoryToLog() {
     appendLogDom(item.text || JSON.stringify(item), item.time ? new Date(item.time).toLocaleTimeString("zh-TW", { hour12: false }) : "");
   });
 }
+function setTopic(name) {
+  name = (name || "").trim();
+  if (!name) return;
+  if (!zizaiState.主題) zizaiState.主題 = { 目前: "", 歷史: [] };
+  zizaiState.主題.目前 = name;
+  zizaiState.主題.歷史 = zizaiState.主題.歷史.filter(t => t !== name);
+  zizaiState.主題.歷史.unshift(name);
+  if (zizaiState.主題.歷史.length > 20) zizaiState.主題.歷史.length = 20;
+  renderTopicUI();
+  document.getElementById("topicInput").value = "";
+  saveStateToGitHub().then(() => backupToDrive());
+}
+function renderTopicUI() {
+  const t = zizaiState.主題 || { 目前: "", 歷史: [] };
+  document.getElementById("topicBadge").textContent = t.目前 ? "：" + t.目前 : "";
+  const list = document.getElementById("topicHistoryList");
+  list.innerHTML = "";
+  if (!t.歷史.length) { list.innerHTML = '<p class="empty-hint">尚無主題紀錄</p>'; return; }
+  t.歷史.forEach(name => {
+    const chip = document.createElement("div");
+    chip.className = "topic-chip" + (name === t.目前 ? " current" : "");
+    chip.textContent = name;
+    chip.onclick = () => setTopic(name);
+    list.appendChild(chip);
+  });
+}
+document.getElementById("topicInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); setTopic(e.target.value); }
+});
 function toggleAuxOption(id) { document.getElementById(id).classList.toggle("open"); }
 function toggleFold(id) { document.getElementById(id).classList.toggle("collapsed"); }
 function makeResizable() {
