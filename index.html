@@ -196,6 +196,7 @@ let tokenClient = null;
 let githubSha = null;
 let githubToken = null;
 let geminiKey = null;
+let isSilentDriveCheck = false;
 let zizaiState = { 現況: { 定位AI: null, 最後更新: null }, 歷程: [] };
 function utf8ToBase64(str) {
   const bytes = new TextEncoder().encode(str);
@@ -212,18 +213,23 @@ function base64ToUtf8(b64) {
 window.onload = () => {
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   setGithubStatus(false, "請登入以讀取密鑰");
-  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential });
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredential, auto_select: true });
   google.accounts.id.renderButton(document.getElementById("signinBtn"), { theme: "outline", size: "medium", text: "signin", shape: "pill" });
+  google.accounts.id.prompt();
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID, scope: DRIVE_SCOPE,
     callback: async (resp) => {
-      if (resp.error) { setDriveStatus(false, "授權失敗"); return; }
+      const wasSilent = isSilentDriveCheck;
+      isSilentDriveCheck = false;
+      if (resp.error) { if (!wasSilent) setDriveStatus(false, "授權失敗"); return; }
       accessToken = resp.access_token;
       await loadGithubTokenFromDrive();
       await loadGeminiKeyFromDrive();
       await loadDriveFileId();
     }
   });
+  isSilentDriveCheck = true;
+  tokenClient.requestAccessToken({ prompt: "" });
   makeResizable();
 };
 function handleCredential(resp) {
@@ -234,7 +240,7 @@ function handleCredential(resp) {
   document.getElementById("signinBtn").style.display = "none";
   document.getElementById("connectDriveBtn").style.display = "inline-block";
 }
-function connectDrive() { tokenClient.requestAccessToken({ prompt: "consent" }); }
+function connectDrive() { isSilentDriveCheck = false; tokenClient.requestAccessToken({ prompt: "consent" }); }
 function signOut() {
   accessToken = null; stateFileId = null; githubToken = null; geminiKey = null;
   updateGeminiStatusUI();
