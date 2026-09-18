@@ -80,7 +80,9 @@
   .resizer:hover::after, .resizer.active::after{ background:var(--jade); width:2px; left:1.5px;}
   .log-item{ font-size:11px; color:var(--ink-soft); line-height:1.6; padding:6px 0; border-bottom:1px dashed var(--line); }
   .log-item time{ display:block; font-size:10px; color:#9A968A; }
-  #collabOption{ position:sticky; top:0; z-index:2; }
+  #coreOption{ position:sticky; top:0; z-index:2; }
+  .core-sub-text{ font-size:12px; color:var(--ink-soft); line-height:1.7; }
+  .core-sub-text a{ color:var(--jade-deep); }
   .aux-option{ margin-bottom:8px; border:1px solid var(--line); border-radius:6px; background:var(--panel); overflow:hidden; }
   .aux-option-head{ display:flex; align-items:center; justify-content:space-between; padding:8px 10px; cursor:pointer; font-size:12px; font-weight:500; color:var(--ink); user-select:none; }
   .aux-option-head:hover{ background:var(--jade-dim); }
@@ -154,6 +156,41 @@
         <button class="fold-btn" onclick="toggleFold('aux')">‹</button>
       </div>
       <div class="panel-body" id="logBody">
+        <div class="aux-option" id="coreOption">
+          <div class="aux-option-head" onclick="toggleAuxOption('coreOption')">
+            <span>主體中樞</span>
+            <span class="opt-arrow">›</span>
+          </div>
+          <div class="aux-option-body">
+            <div class="aux-option" id="coreDocOption">
+              <div class="aux-option-head" onclick="toggleAuxOption('coreDocOption')">
+                <span>主體中樞文件</span>
+                <span class="opt-arrow">›</span>
+              </div>
+              <div class="aux-option-body">
+                <p class="core-sub-text">ZIZAI 運作規則與說明書。<br><a href="https://github.com/skyeden08/zizai/blob/main/README.md" target="_blank" rel="noopener">在 GitHub 上查看 →</a></p>
+              </div>
+            </div>
+            <div class="aux-option" id="coreStatusOption">
+              <div class="aux-option-head" onclick="toggleAuxOption('coreStatusOption')">
+                <span>主體中樞現況</span>
+                <span class="opt-arrow">›</span>
+              </div>
+              <div class="aux-option-body">
+                <p class="core-sub-text" id="coreStatusText">尚無現況資料</p>
+              </div>
+            </div>
+            <div class="aux-option" id="coreHistoryOption">
+              <div class="aux-option-head" onclick="toggleAuxOption('coreHistoryOption')">
+                <span>主體中樞歷程</span>
+                <span class="opt-arrow">›</span>
+              </div>
+              <div class="aux-option-body">
+                <p class="empty-hint">整理規則待後續討論</p>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="aux-option" id="collabOption">
           <div class="aux-option-head" onclick="toggleAuxOption('collabOption')">
             <span>協作</span>
@@ -393,6 +430,7 @@ async function loadStateFromGitHub() {
     setGithubStatus(true, "GitHub正常");
     renderHistoryToLog();
     renderTopicUI();
+    renderCoreStatus();
   } catch (e) {
     setGithubStatus(false, "GitHub連線失敗");
     addLog("錯誤：無法連線 GitHub（" + e.message + "）");
@@ -485,6 +523,14 @@ document.getElementById("topicInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); setTopic(e.target.value); }
   e.stopPropagation();
 });
+function renderCoreStatus() {
+  const el = document.getElementById("coreStatusText");
+  if (!el) return;
+  const cur = zizaiState.現況 || {};
+  if (!cur.定位AI) { el.textContent = "尚無現況資料"; return; }
+  const t = cur.最後更新 ? new Date(cur.最後更新).toLocaleString("zh-TW", { hour12: false }) : "－";
+  el.innerHTML = `定位AI：<strong>${cur.定位AI}</strong><br>最後更新：${t}`;
+}
 function toggleAuxOption(id) { document.getElementById(id).classList.toggle("open"); }
 function toggleFold(id) { document.getElementById(id).classList.toggle("collapsed"); }
 function makeResizable() {
@@ -559,6 +605,7 @@ async function sendMessage() {
   addLog("Gemini 回應完成");
   addResultCard("Gemini 回應", reply.slice(0, 200) + (reply.length > 200 ? "…" : ""));
   zizaiState.現況.定位AI = geminiKey ? "Gemini" : "尚未設定";
+  renderCoreStatus();
   zizaiState.歷程.push({ text: "使用者：" + text, time: new Date().toISOString(), role: "user" });
   zizaiState.歷程.push({ text: "Gemini：" + reply, time: new Date().toISOString(), role: "model" });
   saveStateToGitHub().then(() => backupToDrive());
