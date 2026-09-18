@@ -106,10 +106,18 @@
   .result-card{ background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:12px 14px; margin-bottom:10px; }
   .result-card h3{ font-family:var(--serif); font-size:12.5px; font-weight:600; margin-bottom:5px; }
   .result-card p{ font-size:12px; color:var(--ink-soft); line-height:1.6; }
-  .topic-badge{ font-size:11px; font-weight:400; color:var(--jade-deep); margin-left:8px; }
+  .topic-widget{ position:relative; }
+  .topic-toggle{ display:flex; align-items:center; gap:6px; font-family:var(--sans); font-size:12px; color:var(--ink-soft); background:transparent; border:1px solid var(--line); border-radius:20px; padding:5px 12px; cursor:pointer; }
+  .topic-toggle:hover{ border-color:var(--jade); color:var(--jade-deep); }
+  .topic-toggle #topicBadge{ max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .topic-toggle .opt-arrow{ transform:rotate(90deg); transition:transform .15s ease; }
+  .topic-widget.open .topic-toggle .opt-arrow{ transform:rotate(270deg); }
+  .topic-widget.open .topic-toggle{ border-color:var(--jade); color:var(--jade-deep); }
+  .topic-dropdown{ display:none; position:absolute; top:calc(100% + 6px); right:0; width:240px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px; box-shadow:0 6px 18px rgba(35,38,43,.12); z-index:10; }
+  .topic-widget.open .topic-dropdown{ display:block; }
   .topic-input{ width:100%; font-family:var(--sans); font-size:12px; border:1px solid var(--line); border-radius:5px; padding:7px 9px; background:var(--paper); color:var(--ink); margin-bottom:8px; }
   .topic-input:focus{ outline:none; border-color:var(--jade); }
-  .topic-history{ display:flex; flex-direction:column; gap:4px; }
+  .topic-history{ display:flex; flex-direction:column; gap:4px; max-height:180px; overflow-y:auto; }
   .topic-chip{ display:flex; align-items:center; justify-content:space-between; font-size:11.5px; padding:5px 8px; border-radius:4px; background:var(--paper); border:1px solid var(--line); cursor:pointer; color:var(--ink-soft); }
   .topic-chip:hover{ border-color:var(--jade); color:var(--jade-deep); }
   .topic-chip.current{ background:var(--jade-dim); border-color:var(--jade); color:var(--jade-deep); font-weight:500; }
@@ -160,16 +168,6 @@
             </ul>
           </div>
         </div>
-        <div class="aux-option" id="topicOption">
-          <div class="aux-option-head" onclick="toggleAuxOption('topicOption')">
-            <span>目前主題<span class="topic-badge" id="topicBadge"></span></span>
-            <span class="opt-arrow">›</span>
-          </div>
-          <div class="aux-option-body">
-            <input type="text" id="topicInput" class="topic-input" placeholder="輸入目前對話主題，按 Enter 標記…">
-            <div id="topicHistoryList" class="topic-history"></div>
-          </div>
-        </div>
         <div class="aux-option" id="historyOption">
           <div class="aux-option-head" onclick="toggleAuxOption('historyOption')">
             <span>流水帳</span>
@@ -185,7 +183,19 @@
     </section>
     <div class="resizer" data-left="aux" data-right="chat"></div>
     <section class="panel" id="chat">
-      <div class="panel-head"><h2>對話區</h2></div>
+      <div class="panel-head">
+        <h2>對話區</h2>
+        <div class="topic-widget" id="topicWidget">
+          <button class="topic-toggle" id="topicToggle" onclick="toggleTopicDropdown(event)">
+            <span id="topicBadge">設定主題</span>
+            <span class="opt-arrow" id="topicArrow">›</span>
+          </button>
+          <div class="topic-dropdown" id="topicDropdown">
+            <input type="text" id="topicInput" class="topic-input" placeholder="輸入目前對話主題，按 Enter 標記…">
+            <div id="topicHistoryList" class="topic-history"></div>
+          </div>
+        </div>
+      </div>
       <div class="panel-body" id="chatScroll">
         <div class="bubble ai">歡迎回到 ZIZAI。提出需求，我會依定位、對位、執行、驗證的方式回應。</div>
       </div>
@@ -444,11 +454,12 @@ function setTopic(name) {
   if (zizaiState.主題.歷史.length > 20) zizaiState.主題.歷史.length = 20;
   renderTopicUI();
   document.getElementById("topicInput").value = "";
+  document.getElementById("topicWidget").classList.remove("open");
   saveStateToGitHub().then(() => backupToDrive());
 }
 function renderTopicUI() {
   const t = zizaiState.主題 || { 目前: "", 歷史: [] };
-  document.getElementById("topicBadge").textContent = t.目前 ? "：" + t.目前 : "";
+  document.getElementById("topicBadge").textContent = t.目前 || "設定主題";
   const list = document.getElementById("topicHistoryList");
   list.innerHTML = "";
   if (!t.歷史.length) { list.innerHTML = '<p class="empty-hint">尚無主題紀錄</p>'; return; }
@@ -460,8 +471,19 @@ function renderTopicUI() {
     list.appendChild(chip);
   });
 }
+function toggleTopicDropdown(e) {
+  if (e) e.stopPropagation();
+  document.getElementById("topicWidget").classList.toggle("open");
+}
+document.addEventListener("click", (e) => {
+  const widget = document.getElementById("topicWidget");
+  if (widget && widget.classList.contains("open") && !widget.contains(e.target)) {
+    widget.classList.remove("open");
+  }
+});
 document.getElementById("topicInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); setTopic(e.target.value); }
+  e.stopPropagation();
 });
 function toggleAuxOption(id) { document.getElementById(id).classList.toggle("open"); }
 function toggleFold(id) { document.getElementById(id).classList.toggle("collapsed"); }
