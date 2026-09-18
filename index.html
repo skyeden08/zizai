@@ -197,6 +197,7 @@ let githubSha = null;
 let githubToken = null;
 let geminiKey = null;
 let isSilentDriveCheck = false;
+let tokenExpiryTimer = null;
 let zizaiState = { 現況: { 定位AI: null, 最後更新: null }, 歷程: [] };
 function utf8ToBase64(str) {
   const bytes = new TextEncoder().encode(str);
@@ -223,6 +224,8 @@ window.onload = () => {
       isSilentDriveCheck = false;
       if (resp.error) { if (!wasSilent) setDriveStatus(false, "授權失敗"); return; }
       accessToken = resp.access_token;
+      scheduleTokenRefresh(resp.expires_in);
+      document.getElementById("connectDriveBtn").style.display = "none";
       await loadGithubTokenFromDrive();
       await loadGeminiKeyFromDrive();
       await loadDriveFileId();
@@ -232,16 +235,26 @@ window.onload = () => {
   tokenClient.requestAccessToken({ prompt: "" });
   makeResizable();
 };
+function scheduleTokenRefresh(expiresInSec) {
+  if (tokenExpiryTimer) clearTimeout(tokenExpiryTimer);
+  const sec = parseInt(expiresInSec, 10) || 3300;
+  const refreshMs = Math.max(30000, (sec - 300) * 1000);
+  tokenExpiryTimer = setTimeout(() => {
+    isSilentDriveCheck = true;
+    tokenClient.requestAccessToken({ prompt: "" });
+  }, refreshMs);
+}
 function handleCredential(resp) {
   const payload = parseJwt(resp.credential);
   document.getElementById("userAvatar").src = payload.picture || "";
   document.getElementById("userName").textContent = payload.name || payload.email || "";
   document.getElementById("userChip").style.display = "flex";
   document.getElementById("signinBtn").style.display = "none";
-  document.getElementById("connectDriveBtn").style.display = "inline-block";
+  if (!accessToken) document.getElementById("connectDriveBtn").style.display = "inline-block";
 }
 function connectDrive() { isSilentDriveCheck = false; tokenClient.requestAccessToken({ prompt: "consent" }); }
 function signOut() {
+  if (tokenExpiryTimer) { clearTimeout(tokenExpiryTimer); tokenExpiryTimer = null; }
   accessToken = null; stateFileId = null; githubToken = null; geminiKey = null;
   updateGeminiStatusUI();
   document.getElementById("userChip").style.display = "none";
