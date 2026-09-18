@@ -140,6 +140,12 @@
     <div class="status">
       <span id="githubStatus"><span class="dot" id="githubDot"></span>尚未登入</span>
       <span id="driveStatus"><span class="dot" id="driveDot"></span>備份未連線</span>
+      <div class="topic-widget" id="settingsWidget">
+        <button class="btn-ghost" id="settingsToggle" onclick="toggleSettingsDropdown(event)">設定 ⚙</button>
+        <div class="topic-dropdown" id="settingsDropdown" style="right:0; width:220px;">
+          <p class="core-sub-text">金鑰管理、模型選擇、通知偏好等設定項目，之後陸續補上。</p>
+        </div>
+      </div>
       <div id="signinBtn"></div>
       <div class="userchip" id="userChip">
         <img id="userAvatar" src="" alt="">
@@ -513,11 +519,16 @@ function toggleTopicDropdown(e) {
   if (e) e.stopPropagation();
   document.getElementById("topicWidget").classList.toggle("open");
 }
+function toggleSettingsDropdown(e) {
+  if (e) e.stopPropagation();
+  document.getElementById("settingsWidget").classList.toggle("open");
+}
 document.addEventListener("click", (e) => {
-  const widget = document.getElementById("topicWidget");
-  if (widget && widget.classList.contains("open") && !widget.contains(e.target)) {
-    widget.classList.remove("open");
-  }
+  [document.getElementById("topicWidget"), document.getElementById("settingsWidget")].forEach(widget => {
+    if (widget && widget.classList.contains("open") && !widget.contains(e.target)) {
+      widget.classList.remove("open");
+    }
+  });
 });
 document.getElementById("topicInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); setTopic(e.target.value); }
