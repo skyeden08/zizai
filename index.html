@@ -80,6 +80,7 @@
   .resizer:hover::after, .resizer.active::after{ background:var(--jade); width:2px; left:1.5px;}
   .log-item{ font-size:11px; color:var(--ink-soft); line-height:1.6; padding:6px 0; border-bottom:1px dashed var(--line); }
   .log-item time{ display:block; font-size:10px; color:#9A968A; }
+  #collabOption{ position:sticky; top:0; z-index:2; }
   .aux-option{ margin-bottom:8px; border:1px solid var(--line); border-radius:6px; background:var(--panel); overflow:hidden; }
   .aux-option-head{ display:flex; align-items:center; justify-content:space-between; padding:8px 10px; cursor:pointer; font-size:12px; font-weight:500; color:var(--ink); user-select:none; }
   .aux-option-head:hover{ background:var(--jade-dim); }
@@ -152,7 +153,9 @@
             </ul>
           </div>
         </div>
-        <p class="empty-hint">系統歷程將顯示於此</p>
+        <div id="historyList">
+          <p class="empty-hint">系統歷程將顯示於此</p>
+        </div>
       </div>
     </section>
     <div class="resizer" data-left="aux" data-right="chat"></div>
@@ -471,7 +474,7 @@ function addLog(text) {
   appendLogDom(text, time);
 }
 function appendLogDom(text, time) {
-  const body = document.getElementById("logBody");
+  const body = document.getElementById("historyList");
   const hint = body.querySelector(".empty-hint");
   if (hint) hint.remove();
   const div = document.createElement("div");
