@@ -124,6 +124,14 @@
   .topic-chip:hover{ border-color:var(--jade); color:var(--jade-deep); }
   .topic-chip.current{ background:var(--jade-dim); border-color:var(--jade); color:var(--jade-deep); font-weight:500; }
   .empty-hint{ font-size:12px; color:#A8A398; text-align:center; padding:30px 10px; line-height:1.8; }
+  .file-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11.5px; padding:6px 8px; border-radius:4px; background:var(--paper); border:1px solid var(--line); margin-bottom:6px; }
+  .file-item .file-info{ min-width:0; flex:1 1 auto; }
+  .file-item .file-name{ color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+  .file-item .file-meta{ color:#A8A398; font-size:10.5px; }
+  .file-item .file-meta.uploading{ color:var(--jade-deep); }
+  .file-item .file-meta.failed{ color:var(--warn); }
+  .file-item .file-remove{ flex:0 0 auto; background:none; border:none; color:#A8A398; cursor:pointer; font-size:14px; line-height:1; padding:2px 4px; }
+  .file-item .file-remove:hover{ color:var(--warn); }
   ::-webkit-scrollbar{ width:7px; }
   ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:4px; }
   ::-webkit-scrollbar-track{ background:transparent; }
@@ -251,7 +259,20 @@
     <section class="panel" id="view">
       <div class="panel-head">
         <h2>共視區</h2>
-        <button class="fold-btn" onclick="toggleFold('view')">›</button>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="topic-widget" id="fileWidget">
+            <button class="topic-toggle" id="fileToggle" onclick="toggleFileDropdown(event)">
+              <span id="fileBadge">檔案</span>
+              <span class="opt-arrow" id="fileArrow">›</span>
+            </button>
+            <div class="topic-dropdown" id="fileDropdown" style="right:0;">
+              <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(event)">
+              <button class="btn-ghost" style="width:100%; margin-bottom:8px;" onclick="document.getElementById('fileInput').click()">＋ 上傳檔案</button>
+              <div id="fileList"><p class="empty-hint">尚無檔案</p></div>
+            </div>
+          </div>
+          <button class="fold-btn" onclick="toggleFold('view')">›</button>
+        </div>
       </div>
       <div class="panel-body" id="resultBody">
         <p class="empty-hint">執行成果將顯示於此</p>
@@ -276,7 +297,7 @@ let githubToken = null;
 let geminiKey = null;
 let isSilentDriveCheck = false;
 let tokenExpiryTimer = null;
-let zizaiState = { 現況: { 定位AI: null, 最後更新: null }, 歷程: [], 主題: { 目前: "", 歷史: [] } };
+let zizaiState = { 現況: { 定位AI: null, 最後更新: null }, 歷程: [], 主題: { 目前: "", 歷史: [] }, 檔案: [] };
 function utf8ToBase64(str) {
   const bytes = new TextEncoder().encode(str);
   let binary = "";
@@ -427,6 +448,7 @@ async function loadStateFromGitHub() {
       githubSha = data.sha;
       zizaiState = JSON.parse(base64ToUtf8(data.content));
       if (!zizaiState.主題) zizaiState.主題 = { 目前: "", 歷史: [] };
+      if (!zizaiState.檔案) zizaiState.檔案 = [];
       addLog("已從 GitHub 讀取現況／歷程");
     } else if (res.status === 404) {
       await saveStateToGitHub();
@@ -437,6 +459,7 @@ async function loadStateFromGitHub() {
     renderHistoryToLog();
     renderTopicUI();
     renderCoreStatus();
+    renderFileList();
   } catch (e) {
     setGithubStatus(false, "GitHub連線失敗");
     addLog("錯誤：無法連線 GitHub（" + e.message + "）");
@@ -523,8 +546,12 @@ function toggleSettingsDropdown(e) {
   if (e) e.stopPropagation();
   document.getElementById("settingsWidget").classList.toggle("open");
 }
+function toggleFileDropdown(e) {
+  if (e) e.stopPropagation();
+  document.getElementById("fileWidget").classList.toggle("open");
+}
 document.addEventListener("click", (e) => {
-  [document.getElementById("topicWidget"), document.getElementById("settingsWidget")].forEach(widget => {
+  [document.getElementById("topicWidget"), document.getElementById("settingsWidget"), document.getElementById("fileWidget")].forEach(widget => {
     if (widget && widget.classList.contains("open") && !widget.contains(e.target)) {
       widget.classList.remove("open");
     }
@@ -541,6 +568,76 @@ function renderCoreStatus() {
   if (!cur.定位AI) { el.textContent = "尚無現況資料"; return; }
   const t = cur.最後更新 ? new Date(cur.最後更新).toLocaleString("zh-TW", { hour12: false }) : "－";
   el.innerHTML = `定位AI：<strong>${cur.定位AI}</strong><br>最後更新：${t}`;
+}
+function genFileId() {
+  return "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+async function handleFileSelect(e) {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  if (!accessToken) { alert("請先登入並連接雲端硬碟，才能上傳檔案。"); return; }
+  const id = genFileId();
+  const entry = { id, 名稱: file.name, 類型: file.type || "未知", 大小: file.size, 上傳時間: new Date().toISOString(), 狀態: "上傳中", driveId: null };
+  if (!zizaiState.檔案) zizaiState.檔案 = [];
+  zizaiState.檔案.unshift(entry);
+  renderFileList();
+  try {
+    const driveId = await uploadFileToDrive(file, id);
+    entry.狀態 = "可用";
+    entry.driveId = driveId;
+  } catch (err) {
+    entry.狀態 = "失敗";
+  }
+  renderFileList();
+  saveStateToGitHub().then(() => backupToDrive());
+}
+async function uploadFileToDrive(file, id) {
+  const metadata = { name: `zizai_file_${id}_${file.name}`, mimeType: file.type || "application/octet-stream" };
+  const form = new FormData();
+  form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+  form.append("file", file);
+  const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", { method: "POST", headers: { Authorization: `Bearer ${accessToken}` }, body: form });
+  const data = await res.json();
+  if (!data.id) throw new Error("上傳失敗");
+  return data.id;
+}
+function renderFileList() {
+  const listEl = document.getElementById("fileList");
+  const badgeEl = document.getElementById("fileBadge");
+  if (!listEl) return;
+  const files = (zizaiState.檔案 || []).filter(f => f.狀態 !== "已移除");
+  badgeEl.textContent = files.length ? `檔案 (${files.length})` : "檔案";
+  listEl.innerHTML = "";
+  if (!files.length) { listEl.innerHTML = '<p class="empty-hint">尚無檔案</p>'; return; }
+  files.forEach(f => {
+    const item = document.createElement("div");
+    item.className = "file-item";
+    const statusClass = f.狀態 === "上傳中" ? "uploading" : (f.狀態 === "失敗" ? "failed" : "");
+    item.innerHTML = `
+      <div class="file-info">
+        <span class="file-name" title="${f.名稱}">${f.名稱}</span>
+        <span class="file-meta ${statusClass}">${f.狀態}${f.狀態 === "可用" ? " · " + formatFileSize(f.大小) : ""}</span>
+      </div>
+      <button class="file-remove" title="移除">✕</button>`;
+    item.querySelector(".file-remove").onclick = () => removeFile(f.id);
+    listEl.appendChild(item);
+  });
+}
+async function removeFile(id) {
+  const entry = (zizaiState.檔案 || []).find(f => f.id === id);
+  if (!entry) return;
+  if (entry.driveId && accessToken) {
+    try { await fetch(`https://www.googleapis.com/drive/v3/files/${entry.driveId}`, { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }); } catch (e) {}
+  }
+  zizaiState.檔案 = (zizaiState.檔案 || []).filter(f => f.id !== id);
+  renderFileList();
+  saveStateToGitHub().then(() => backupToDrive());
 }
 function toggleAuxOption(id) { document.getElementById(id).classList.toggle("open"); }
 function toggleFold(id) { document.getElementById(id).classList.toggle("collapsed"); }
