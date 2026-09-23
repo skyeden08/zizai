@@ -124,6 +124,9 @@
   .topic-chip:hover{ border-color:var(--jade); color:var(--jade-deep); }
   .topic-chip.current{ background:var(--jade-dim); border-color:var(--jade); color:var(--jade-deep); font-weight:500; }
   .empty-hint{ font-size:12px; color:#A8A398; text-align:center; padding:30px 10px; line-height:1.8; }
+  .section-label{ font-family:var(--serif); font-size:12px; font-weight:600; color:var(--ink-soft); letter-spacing:.03em; margin-bottom:8px; }
+  #fileSection{ padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--line); }
+  #fileSection .empty-hint{ padding:14px 10px; }
   .file-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11.5px; padding:6px 8px; border-radius:4px; background:var(--paper); border:1px solid var(--line); margin-bottom:6px; }
   .file-item .file-info{ min-width:0; flex:1 1 auto; }
   .file-item .file-name{ color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
@@ -267,15 +270,20 @@
             </button>
             <div class="topic-dropdown" id="fileDropdown" style="right:0;">
               <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(event)">
-              <button class="btn-ghost" style="width:100%; margin-bottom:8px;" onclick="document.getElementById('fileInput').click()">＋ 上傳檔案</button>
-              <div id="fileList"><p class="empty-hint">尚無檔案</p></div>
+              <button class="btn-ghost" style="width:100%;" onclick="document.getElementById('fileInput').click()">＋ 上傳檔案</button>
             </div>
           </div>
           <button class="fold-btn" onclick="toggleFold('view')">›</button>
         </div>
       </div>
       <div class="panel-body" id="resultBody">
-        <p class="empty-hint">執行成果將顯示於此</p>
+        <div id="fileSection">
+          <h3 class="section-label">檔案</h3>
+          <div id="fileListMain"><p class="empty-hint">尚無檔案</p></div>
+        </div>
+        <div id="resultSection">
+          <p class="empty-hint">執行成果將顯示於此</p>
+        </div>
       </div>
     </section>
   </div>
@@ -608,11 +616,11 @@ async function uploadFileToDrive(file, id) {
   return data.id;
 }
 function renderFileList() {
-  const listEl = document.getElementById("fileList");
+  const listEl = document.getElementById("fileListMain");
   const badgeEl = document.getElementById("fileBadge");
   if (!listEl) return;
   const files = (zizaiState.檔案 || []).filter(f => f.狀態 !== "已移除");
-  badgeEl.textContent = files.length ? `檔案 (${files.length})` : "檔案";
+  if (badgeEl) badgeEl.textContent = files.length ? `檔案 (${files.length})` : "檔案";
   listEl.innerHTML = "";
   if (!files.length) { listEl.innerHTML = '<p class="empty-hint">尚無檔案</p>'; return; }
   files.forEach(f => {
@@ -743,7 +751,7 @@ function addBubble(role, text) {
   scroll.parentElement.scrollTop = scroll.parentElement.scrollHeight;
 }
 function addResultCard(title, detail) {
-  const body = document.getElementById("resultBody");
+  const body = document.getElementById("resultSection");
   const hint = body.querySelector(".empty-hint");
   if (hint) hint.remove();
   const card = document.createElement("div");
