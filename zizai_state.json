@@ -1,7 +1,7 @@
 {
   "現況": {
     "定位AI": "Gemini",
-    "最後更新": "2026-09-19T04:42:36.561Z"
+    "最後更新": "2026-09-23T05:28:56.713Z"
   },
   "歷程": [
     {
@@ -48,5 +48,16 @@
   "主題": {
     "目前": "",
     "歷史": []
-  }
+  },
+  "檔案": [
+    {
+      "id": "fmudnxhybrm1gey",
+      "名稱": "ZIZAI 主體中樞文件V0.2 20260922.docx",
+      "類型": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "大小": 27877,
+      "上傳時間": "2026-09-23T05:28:54.565Z",
+      "狀態": "可用",
+      "driveId": "1--sn6puXAdOKm9hVVhzrIE1l6prIJCuq"
+    }
+  ]
 }
