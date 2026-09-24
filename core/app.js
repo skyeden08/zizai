@@ -16,12 +16,16 @@ export async function bootstrap() {
   let drive;
   let state;
 
-  const safe = (label, fn) => Promise.resolve().then(fn).catch(async error => {
+  const safe = (label, fn) => Promise.resolve().then(fn).catch(error => {
     console.error(label, error);
-    try { await ui.call("setStatus", "githubStatus", `${label} 失敗`, false); } catch {}
+    ui.call("setStatus", "githubStatus", label + " 失敗", false).catch(() => {});
   });
-  const refreshState = () => safe("State render", async () => ui.call("renderState", await state.call("get")));
 
+  const refreshState = () => safe("State render", async () => {
+    if (state) await ui.call("renderState", await state.call("get"));
+  });
+
+  // UI first. Nothing external is allowed to block the page shell.
   await ui.call("mount", {
     signOut: () => safe("Sign out", () => auth?.call("signOut")),
     connectDrive: () => safe("Drive authorize", () => registry.call("drive", "authorize")),
@@ -33,7 +37,7 @@ export async function bootstrap() {
           await ui.call("renderResult", "Gemini 回應", reply.slice(0, 200));
         }
       } catch (error) {
-        await ui.call("addBubble", "ai", `錯誤：${error.message}`);
+        await ui.call("addBubble", "ai", "錯誤：" + error.message);
       }
     },
     setTopic: async text => {
@@ -48,12 +52,12 @@ export async function bootstrap() {
       await refreshState();
     },
     fileSelected: async file => {
-      if (!file) return;
+      if (!file || !state) return;
       try {
         const result = await registry.call("drive", "upload", file);
         const current = await state.call("get");
         current.檔案.unshift({
-          id: `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
+          id: "f" + Date.now().toString(36),
           名稱: file.name,
           類型: file.type || "未知",
           大小: file.size,
@@ -65,23 +69,24 @@ export async function bootstrap() {
         await state.call("save");
         await refreshState();
       } catch (error) {
-        await ui.call("addBubble", "ai", `檔案上傳失敗：${error.message}`);
+        await ui.call("addBubble", "ai", "檔案上傳失敗：" + error.message);
       }
     },
     fileRemoved: async file => {
       try {
-        if (file.driveId) await registry.call("drive", "remove", file.driveId);
+        if (file?.driveId) await registry.call("drive", "remove", file.driveId);
         const current = await state.call("get");
         current.檔案 = current.檔案.filter(item => item.id !== file.id);
         await state.call("set", current);
         await state.call("save");
         await refreshState();
       } catch (error) {
-        await ui.call("addBubble", "ai", `檔案移除失敗：${error.message}`);
+        await ui.call("addBubble", "ai", "檔案移除失敗：" + error.message);
       }
     }
   });
 
+  // Create and register every module independently.
   const google = globalThis.google;
   auth = createAuthModule({
     google,
@@ -94,19 +99,25 @@ export async function bootstrap() {
         await auth.call("restoreFromDrive", drive);
         if (await registry.isReady("github")) await state.call("load");
         await refreshState();
-        const githubReady = await registry.isReady("github");
-        const geminiReady = await registry.isReady("gemini");
-        await ui.call("setStatus", "githubStatus", githubReady ? "GitHub 密鑰已載入" : "GitHub 未接入", githubReady);
-        await ui.call("setStatus", "geminiStatus", geminiReady ? "Gemini 已接入" : "Gemini 未接入", geminiReady);
+        await ui.call("setStatus", "githubStatus",
+          await registry.isReady("github") ? "GitHub 密鑰已載入" : "GitHub 未接入",
+          await registry.isReady("github"));
+        await ui.call("setStatus", "geminiStatus",
+          await registry.isReady("gemini") ? "Gemini 已接入" : "Gemini 未接入",
+          await registry.isReady("gemini"));
       } catch (error) {
         console.error("Post-login restore failed", error);
-        await ui.call("setStatus", "driveStatus", `Drive：${error.message}`, false);
+        await ui.call("setStatus", "driveStatus", "Drive：" + error.message, false);
       }
     },
     onSignedOut: () => ui.call("setSignedOut")
   });
 
-  drive = createDriveModule({ auth, config: CONFIG, onStatus: (ok, text) => ui.call("setStatus", "driveStatus", text, ok) });
+  drive = createDriveModule({
+    auth,
+    config: CONFIG,
+    onStatus: (ok, text) => ui.call("setStatus", "driveStatus", text, ok)
+  });
   const github = createGitHubModule({ auth, config: CONFIG });
   const gemini = createGeminiModule({ auth, config: CONFIG });
   state = createStateModule({ github, drive, config: CONFIG });
@@ -114,13 +125,15 @@ export async function bootstrap() {
   const chat = createChatModule({ registry, ui, state });
 
   [auth, drive, github, gemini, state, bridge, chat].forEach(module => registry.register(module));
+
+  // Initialization is isolated: one module failing cannot prevent the others.
   const results = await registry.initializeAll();
   globalThis.ZIZAI = Object.freeze({ registry, ready: results });
 
-  // Google Identity Services may load after the page. Do not block ZIZAI startup on it.
+  // Google GIS is optional at startup. Attach it later if it arrives late.
   if (!google?.accounts?.id) {
     const started = Date.now();
-    const attachGoogleWhenReady = async () => {
+    const waitForGoogle = async () => {
       while (!globalThis.google?.accounts?.id && Date.now() - started < 10000) {
         await new Promise(resolve => setTimeout(resolve, 50));
       }
@@ -132,11 +145,12 @@ export async function bootstrap() {
         await registry.call("auth", "attachGoogle", globalThis.google);
         await auth.initialize();
       } catch (error) {
-        console.error("Google Identity Services initialization failed", error);
+        console.error("Google 登入初始化失敗", error);
         await ui.call("setStatus", "githubStatus", "Google 登入初始化失敗", false);
       }
     };
-    attachGoogleWhenReady();
+    waitForGoogle();
   }
+
   return globalThis.ZIZAI;
 }
