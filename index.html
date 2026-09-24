@@ -1,49 +1,6 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZIZAI · 主體</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#3F6F63">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="ui/zizai.css">
-</head>
-<body>
-<div class="app">
-  <div id="uiHeader"></div>
-  <div class="layout" id="uiLayout"></div>
-</div>
-<script>async function loadUIModules() {
-  const modules = [
-    ["header", "ui/modules/header.html"],
-    ["aux", "ui/modules/aux.html"],
-    ["chat", "ui/modules/chat.html"],
-    ["view", "ui/modules/view.html"]
-  ];
-  const header = document.getElementById("uiHeader");
-  const layout = document.getElementById("uiLayout");
-  if (!header || !layout) throw new Error("ZIZAI UI mount point missing");
-  const results = await Promise.all(modules.map(async ([id, path]) => {
-    const res = await fetch(path, { cache: "no-store" });
-    if (!res.ok) throw new Error("UI module load failed: " + path);
-    return [id, await res.text()];
-  }));
-  for (const [id, html] of results) {
-    if (id === "header") header.innerHTML = html;
-    else layout.insertAdjacentHTML("beforeend", html);
-  }
-  layout.insertAdjacentHTML("afterbegin", '<div class="resizer" data-left="aux" data-right="chat"></div>');
-  layout.insertAdjacentHTML("beforeend", '<div class="resizer" data-left="chat" data-right="view"></div>');
-  for (const src of ["modules/github.js", "modules/gemini.js"]) { const s=document.createElement("script"); s.src=src; document.body.appendChild(s); await new Promise((resolve,reject)=>{s.onload=resolve;s.onerror=()=>reject(new Error("功能模組載入失敗："+src));}); }
-  const script=document.createElement("script"); script.src="core/zizai.js"; document.body.appendChild(script);
-}
-loadUIModules().catch(err => {
-  document.body.innerHTML = '<div style="padding:24px;font-family:sans-serif">ZIZAI UI 載入失敗：' + err.message + '</div>';
-});
-</script>
-</body>
-</html>
+<html lang="zh-Hant"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ZIZAI · 主體</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#3F6F63"><link rel="stylesheet" href="ui/zizai.css"><script src="https://accounts.google.com/gsi/client" async defer></script>
+</head><body><div class="app"><div id="uiHeader"></div><div class="layout" id="uiLayout"></div></div>
+<script type="module">import { bootstrap } from "./core/app.js"; const start = async () => { try { await bootstrap({ google: globalThis.google }); } catch (error) { console.error("ZIZAI bootstrap failed", error); document.body.insertAdjacentHTML("beforeend", `<p class="empty-hint">ZIZAI 初始化失敗：${error.message}</p>`); } }; if (globalThis.google) start(); else window.addEventListener("load", start, { once: true });</script></body></html>
