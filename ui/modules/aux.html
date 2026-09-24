@@ -1,0 +1,14 @@
+<section class="panel" id="aux">
+  <div class="panel-head"><h2>輔助區</h2><button class="fold-btn" onclick="toggleFold('aux')">‹</button></div>
+  <div class="panel-body" id="logBody">
+    <div class="aux-option" id="coreOption"><div class="aux-option-head" onclick="toggleAuxOption('coreOption')"><span>主體中樞</span><span class="opt-arrow">›</span></div><div class="aux-option-body">
+      <div class="aux-option" id="coreDocOption"><div class="aux-option-head" onclick="toggleAuxOption('coreDocOption')"><span>主體中樞文件</span><span class="opt-arrow">›</span></div><div class="aux-option-body"><p class="core-sub-text">ZIZAI 運作規則與說明書。<br><a href="https://github.com/skyeden08/zizai/blob/main/README.md" target="_blank" rel="noopener">在 GitHub 上查看 →</a></p></div></div>
+      <div class="aux-option" id="coreStatusOption"><div class="aux-option-head" onclick="toggleAuxOption('coreStatusOption')"><span>主體中樞現況</span><span class="opt-arrow">›</span></div><div class="aux-option-body"><p class="core-sub-text" id="coreStatusText">尚無現況資料</p></div></div>
+      <div class="aux-option" id="coreHistoryOption"><div class="aux-option-head" onclick="toggleAuxOption('coreHistoryOption')"><span>主體中樞歷程</span><span class="opt-arrow">›</span></div><div class="aux-option-body"><p class="empty-hint">整理規則待後續討論</p></div></div>
+    </div></div>
+    <div class="aux-option" id="collabOption"><div class="aux-option-head" onclick="toggleAuxOption('collabOption')"><span>協作</span><span class="opt-arrow">›</span></div><div class="aux-option-body"><ul class="ai-status-list">
+      <li><span class="ai-name">Grok</span><span class="ai-state on">已接入</span></li><li><span class="ai-name">Claude</span><span class="ai-state off">未接入</span></li><li><span class="ai-name">ChatGPT</span><span class="ai-state off">未接入</span></li><li><span class="ai-name">Gemini</span><span class="ai-state off" id="geminiStatus">未接入</span></li>
+    </ul></div></div>
+    <div class="aux-option" id="historyOption"><div class="aux-option-head" onclick="toggleAuxOption('historyOption')"><span>流水帳</span><span class="opt-arrow">›</span></div><div class="aux-option-body"><div id="historyList"><p class="empty-hint">系統歷程將顯示於此</p></div></div></div>
+  </div>
+</section>
