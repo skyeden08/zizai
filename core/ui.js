@@ -40,36 +40,56 @@ export function createUIModule() {
         const header = byId("uiHeader");
         const layout = byId("uiLayout");
         if (!header || !layout) throw new Error("UI mount points missing");
-        header.innerHTML = await fetchFragment("ui/modules/header.html");
-        const fragments = await Promise.all(["aux", "chat", "view"].map(async name => fetchFragment(`ui/modules/${name}.html`)));
-        layout.replaceChildren();
-        layout.insertAdjacentHTML("beforeend", fragments[0]);
-        layout.insertAdjacentHTML("beforeend", '<div class="resizer" data-left="aux" data-right="chat"></div>');
-        layout.insertAdjacentHTML("beforeend", fragments[1]);
-        layout.insertAdjacentHTML("beforeend", '<div class="resizer" data-left="chat" data-right="view"></div>');
-        layout.insertAdjacentHTML("beforeend", fragments[2]);
-        on("settingsToggle", "click", () => toggle("settingsWidget"));
-        on("topicToggle", "click", () => toggle("topicWidget"));
-        on("fileToggle", "click", () => toggle("fileWidget"));
-        on("signoutAction", "click", () => callbacks.signOut?.());
-        on("connectDriveBtn", "click", () => callbacks.connectDrive?.());
-        on("chatSend", "click", () => { const input = byId("chatInput"); const value = input?.value || ""; if (input) input.value = ""; callbacks.sendMessage?.(value); });
-        on("chatInput", "keydown", event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); const value = event.target.value; event.target.value = ""; callbacks.sendMessage?.(value); } });
-        on("fileUploadButton", "click", () => byId("fileInput")?.click());
-        on("fileInput", "change", event => { callbacks.fileSelected?.(event.target.files?.[0]); event.target.value = ""; });
-        on("topicInput", "keydown", event => { if (event.key === "Enter") { event.preventDefault(); callbacks.setTopic?.(event.target.value); event.target.value = ""; } });
-        document.addEventListener("click", event => ["topicWidget", "settingsWidget", "fileWidget"].forEach(id => { const widget = byId(id); if (widget?.classList.contains("open") && !widget.contains(event.target)) widget.classList.remove("open"); }));
-        document.querySelectorAll(".fold-btn").forEach(button => button.addEventListener("click", () => byId(button.dataset.target)?.classList.toggle("collapsed")));
-        document.querySelectorAll(".aux-option-head").forEach(head => head.addEventListener("click", () => head.parentElement.classList.toggle("open")));
-        document.querySelectorAll(".resizer").forEach(bar => bar.addEventListener("mousedown", event => {
-          event.preventDefault(); bar.classList.add("active");
-          const left = byId(bar.dataset.left), right = byId(bar.dataset.right);
-          if (!left || !right) return;
-          const start = event.clientX, leftWidth = left.offsetWidth, rightWidth = right.offsetWidth;
-          const move = e => { const delta = e.clientX - start; left.style.flex = `0 0 ${Math.max(40, leftWidth + delta)}px`; if (right.id !== "chat") right.style.flex = `0 0 ${Math.max(40, rightWidth - delta)}px`; };
-          const up = () => { bar.classList.remove("active"); document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); };
-          document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
-        }));
+
+        // Never block the page shell on network-loaded UI fragments.
+        header.innerHTML = '<div class="brand"><span class="mark">ZIZAI</span><span class="tag">主體 · 自在</span></div><div class="status"><span>正在載入介面…</span></div>';
+        layout.innerHTML = '<div style="padding:24px;color:#6B6F76;font-size:13px;">ZIZAI 正在啟動…</div>';
+
+        const load = async () => {
+          try {
+            header.innerHTML = await fetchFragment("ui/modules/header.html");
+            const fragments = await Promise.all(["aux", "chat", "view"].map(async name => fetchFragment(`ui/modules/${name}.html`)));
+            layout.replaceChildren();
+            layout.insertAdjacentHTML("beforeend", fragments[0]);
+            layout.insertAdjacentHTML("beforeend", '<div class="resizer" data-left="aux" data-right="chat"></div>');
+            layout.insertAdjacentHTML("beforeend", fragments[1]);
+            layout.insertAdjacentHTML("beforeend", '<div class="resizer" data-left="chat" data-right="view"></div>');
+            layout.insertAdjacentHTML("beforeend", fragments[2]);
+            bindEvents();
+          } catch (error) {
+            console.error("UI fragments failed", error);
+            layout.innerHTML = '<div style="padding:24px;color:#B5542D;font-size:13px;">介面模組載入失敗：' + error.message + '</div>';
+          }
+        };
+        load();
+        return true;
+      },
+
+        const bindEvents = () => {
+          on("settingsToggle", "click", () => toggle("settingsWidget"));
+          on("topicToggle", "click", () => toggle("topicWidget"));
+          on("fileToggle", "click", () => toggle("fileWidget"));
+          on("signoutAction", "click", () => callbacks.signOut?.());
+          on("connectDriveBtn", "click", () => callbacks.connectDrive?.());
+          on("chatSend", "click", () => { const input = byId("chatInput"); const value = input?.value || ""; if (input) input.value = ""; callbacks.sendMessage?.(value); });
+          on("chatInput", "keydown", event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); const value = event.target.value; event.target.value = ""; callbacks.sendMessage?.(value); } });
+          on("fileUploadButton", "click", () => byId("fileInput")?.click());
+          on("fileInput", "change", event => { callbacks.fileSelected?.(event.target.files?.[0]); event.target.value = ""; });
+          on("topicInput", "keydown", event => { if (event.key === "Enter") { event.preventDefault(); callbacks.setTopic?.(event.target.value); event.target.value = ""; } });
+          document.addEventListener("click", event => ["topicWidget", "settingsWidget", "fileWidget"].forEach(id => { const widget = byId(id); if (widget?.classList.contains("open") && !widget.contains(event.target)) widget.classList.remove("open"); }));
+          document.querySelectorAll(".fold-btn").forEach(button => button.addEventListener("click", () => byId(button.dataset.target)?.classList.toggle("collapsed")));
+          document.querySelectorAll(".aux-option-head").forEach(head => head.addEventListener("click", () => head.parentElement.classList.toggle("open")));
+          document.querySelectorAll(".resizer").forEach(bar => bar.addEventListener("mousedown", event => {
+            event.preventDefault(); bar.classList.add("active");
+            const left = byId(bar.dataset.left), right = byId(bar.dataset.right);
+            if (!left || !right) return;
+            const start = event.clientX, leftWidth = left.offsetWidth, rightWidth = right.offsetWidth;
+            const move = e => { const delta = e.clientX - start; left.style.flex = `0 0 ${Math.max(40, leftWidth + delta)}px`; if (right.id !== "chat") right.style.flex = `0 0 ${Math.max(40, rightWidth - delta)}px`; };
+            const up = () => { bar.classList.remove("active"); document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); };
+            document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
+          }));
+
+        };
         return true;
       },
       setStatus,
