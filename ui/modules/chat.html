@@ -1,8 +1,1 @@
-<section class="panel" id="chat">
-  <div class="panel-head"><h2>對話區</h2><div class="topic-widget" id="topicWidget">
-    <button class="topic-toggle" id="topicToggle" onclick="toggleTopicDropdown(event)"><span id="topicBadge">設定主題</span><span class="opt-arrow" id="topicArrow">›</span></button>
-    <div class="topic-dropdown" id="topicDropdown"><input type="text" id="topicInput" class="topic-input" placeholder="輸入目前對話主題，按 Enter 標記…"><div id="topicHistoryList" class="topic-history"></div></div>
-  </div></div>
-  <div class="panel-body" id="chatScroll"><div class="bubble ai">歡迎回到 ZIZAI。提出需求，我會依定位、對位、執行、驗證的方式回應。</div></div>
-  <div class="chat-input-bar"><textarea id="chatInput" placeholder="輸入需求…（Enter 送出，Shift+Enter 換行）"></textarea><button onclick="sendMessage()">送出</button></div>
-</section>
+<section class="panel" id="chat"><div class="panel-head"><h2>對話區</h2><div class="topic-widget" id="topicWidget"><button class="topic-toggle" id="topicToggle"><span id="topicBadge">設定主題</span><span class="opt-arrow">›</span></button><div class="topic-dropdown"><input type="text" id="topicInput" class="topic-input" placeholder="輸入目前對話主題，按 Enter 標記…"><div id="topicHistoryList" class="topic-history"></div></div></div></div><div class="panel-body" id="chatScroll"><div class="bubble ai">歡迎回到 ZIZAI。提出需求，我會依定位、對位、執行、驗證的方式回應。</div></div><div class="chat-input-bar"><textarea id="chatInput" placeholder="輸入需求…（Enter 送出，Shift+Enter 換行）"></textarea><button id="chatSend">送出</button></div></section>

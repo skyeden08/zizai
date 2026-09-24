@@ -1,8 +1,1 @@
-<section class="panel" id="view">
-  <div class="panel-head"><h2>共視區</h2><div style="display:flex;align-items:center;gap:10px;">
-    <div class="topic-widget" id="fileWidget"><button class="topic-toggle" id="fileToggle" onclick="toggleFileDropdown(event)"><span id="fileBadge">檔案</span><span class="opt-arrow" id="fileArrow">›</span></button>
-      <div class="topic-dropdown" id="fileDropdown" style="right:0;"><input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(event)"><button class="btn-ghost" style="width:100%;margin-bottom:8px;" onclick="document.getElementById('fileInput').click()">＋ 上傳檔案</button><div id="fileList"><p class="empty-hint">尚無檔案</p></div></div>
-    </div><button class="fold-btn" onclick="toggleFold('view')">›</button>
-  </div></div>
-  <div class="panel-body" id="resultBody"><p class="empty-hint">執行成果將顯示於此</p></div>
-</section>
+<section class="panel" id="view"><div class="panel-head"><h2>共視區</h2><div style="display:flex;align-items:center;gap:10px;"><div class="topic-widget" id="fileWidget"><button class="topic-toggle" id="fileToggle"><span id="fileBadge">檔案</span><span class="opt-arrow">›</span></button><div class="topic-dropdown" style="right:0;"><input type="file" id="fileInput" style="display:none;"><button class="btn-ghost" id="fileUploadButton" style="width:100%;margin-bottom:8px;">＋ 上傳檔案</button><div id="fileList"><p class="empty-hint">尚無檔案</p></div></div></div><button class="fold-btn" data-target="view">›</button></div></div><div class="panel-body" id="resultBody"><p class="empty-hint">執行成果將顯示於此</p></div></section>

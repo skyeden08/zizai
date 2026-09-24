@@ -3,15 +3,8 @@
   <div class="status">
     <span id="githubStatus"><span class="dot" id="githubDot"></span>尚未登入</span>
     <span id="driveStatus"><span class="dot" id="driveDot"></span>備份未連線</span>
-    <div class="topic-widget" id="settingsWidget">
-      <button class="btn-ghost" id="settingsToggle" onclick="toggleSettingsDropdown(event)">設定 ⚙</button>
-      <div class="topic-dropdown" id="settingsDropdown" style="right:0; width:220px;"><p class="core-sub-text">金鑰管理、模型選擇、通知偏好等設定項目，之後陸續補上。</p></div>
-    </div>
+    <div class="topic-widget" id="settingsWidget"><button class="btn-ghost" id="settingsToggle">設定 ⚙</button><div class="topic-dropdown" id="settingsDropdown" style="right:0;width:220px;"><p class="core-sub-text">金鑰管理、模型選擇、通知偏好等設定項目，之後陸續補上。</p></div></div>
     <div id="signinBtn"></div>
-    <div class="userchip" id="userChip">
-      <img id="userAvatar" src="" alt=""><span id="userName"></span>
-      <button class="btn-ghost" id="connectDriveBtn" style="display:none;" onclick="connectDrive()">連接密鑰／備份</button>
-      <button class="btn-ghost" onclick="signOut()">登出</button>
-    </div>
+    <div class="userchip" id="userChip"><img id="userAvatar" src="" alt=""><span id="userName"></span><button class="btn-ghost" id="connectDriveBtn" style="display:none;">連接密鑰／備份</button><button class="btn-ghost" id="signoutAction">登出</button></div>
   </div>
 </header>

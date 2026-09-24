@@ -1,22 +1,16 @@
 import { createModule } from "./contract.js";
 
-export function createAuthModule({ google = globalThis.google, clientId, onUser, onStatus } = {}) {
-  let user = null;
-  let driveToken = null;
-  let githubToken = null;
-  let geminiKey = null;
+export function createAuthModule({ google, clientId, onUser, onStatus } = {}) {
+  let user = null, driveToken = null, githubToken = null, geminiKey = null;
   const notify = (ok, text) => onStatus?.(ok, text);
-  const module = createModule({
+  return createModule({
     id: "auth", capabilities: ["signin", "signout", "credentials"],
     ready: () => Boolean(google?.accounts?.id),
     actions: {
-      getUser: () => user,
-      getGithubToken: () => githubToken,
-      getGeminiKey: () => geminiKey,
-      getDriveToken: () => driveToken,
-      setGithubToken: token => { githubToken = token; },
-      setGeminiKey: key => { geminiKey = key; },
-      setDriveToken: token => { driveToken = token; },
+      getUser: () => user, getGithubToken: () => githubToken, getGeminiKey: () => geminiKey, getDriveToken: () => driveToken,
+      setGithubToken: token => { githubToken = token; return token; },
+      setGeminiKey: key => { geminiKey = key; return key; },
+      setDriveToken: token => { driveToken = token; return token; },
       signOut: () => { user = null; driveToken = githubToken = geminiKey = null; google?.accounts?.id.disableAutoSelect(); notify(false, "尚未登入"); }
     },
     initialize: async () => {
@@ -27,11 +21,10 @@ export function createAuthModule({ google = globalThis.google, clientId, onUser,
           const payload = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(part + "=".repeat((4 - part.length % 4) % 4)), c => c.charCodeAt(0))));
           user = payload; notify(true, "已登入"); onUser?.(payload);
         } catch (error) { notify(false, "登入資料無效"); console.error(error); }
-      }});
+      });
       const target = document.getElementById("signinBtn");
       if (target) google.accounts.id.renderButton(target, { theme: "outline", size: "medium", text: "signin", shape: "pill" });
       google.accounts.id.prompt();
     }
   });
-  return module;
 }
