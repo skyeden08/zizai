@@ -5,21 +5,41 @@ export function createGitHubModule({ auth, config } = {}) {
   const request = async (path, options = {}) => {
     const token = await auth.call("getGithubToken");
     if (!token) throw new Error("GitHub 尚未接入");
-    const response = await fetch(base + path, { ...options, headers: { Authorization: `token ${token}`, ...(options.headers || {}) } });
+    const response = await fetch(base + path, {
+      ...options,
+      headers: { Authorization: `token ${token}`, ...(options.headers || {}) }
+    });
     if (!response.ok) throw new Error(`GitHub ${response.status}`);
     return response.json();
   };
-  const utf8ToBase64 = text => { const bytes = new TextEncoder().encode(text); let binary = ""; bytes.forEach(byte => binary += String.fromCharCode(byte)); return btoa(binary); };
-  const base64ToUtf8 = text => { const binary = atob(text); return new TextDecoder().decode(Uint8Array.from(binary, c => c.charCodeAt(0))); };
+  const utf8ToBase64 = text => {
+    const bytes = new TextEncoder().encode(text);
+    let binary = "";
+    bytes.forEach(byte => binary += String.fromCharCode(byte));
+    return btoa(binary);
+  };
+  const base64ToUtf8 = text => {
+    const binary = atob(text);
+    return new TextDecoder().decode(Uint8Array.from(binary, c => c.charCodeAt(0)));
+  };
   return createModule({
-    id: "github", capabilities: ["read", "write"],
+    id: "github",
+    capabilities: ["read", "write"],
     ready: async () => Boolean(await auth.call("getGithubToken")),
     actions: {
-      read: async path => { const data = await request(path); return { path, sha: data.sha, content: base64ToUtf8(data.content.replace(/\n/g, "")) }; },
+      read: async path => {
+        const data = await request(path);
+        return { path, sha: data.sha, content: base64ToUtf8(data.content.replace(/\n/g, "")) };
+      },
       write: async (path, content, message = "ZIZAI 更新 GitHub") => {
         let sha;
-        try { sha = (await request(path)).sha; } catch (error) { if (!String(error.message).includes("404")) throw error; }
-        const data = await request(path, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message, content: utf8ToBase64(content), ...(sha ? { sha } : {}) }) });
+        try { sha = (await request(path)).sha; }
+        catch (error) { if (!String(error.message).includes("404")) throw error; }
+        const data = await request(path, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, content: utf8ToBase64(content), ...(sha ? { sha } : {}) })
+        });
         return { path, sha: data.content?.sha };
       }
     }

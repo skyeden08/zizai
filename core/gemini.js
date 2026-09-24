@@ -12,7 +12,9 @@ export function createGeminiModule({ auth, config } = {}) {
         const contents = [{ role: "user", parts: [{ text: "（ZIZAI 模組能力）需要操作 repository 時，僅輸出 [github_call]{\"action\":\"read\",\"path\":\"README.md\"}[/github_call]。" }] }, ...history]
           .map(item => ({ role: ["model", "ai", "assistant"].includes(item.role) ? "model" : "user", parts: [{ text: item.text || "" }] }));
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${config.geminiModel}:generateContent?key=${encodeURIComponent(key)}`, {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents })
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents })
         });
         if (!response.ok) return `Gemini 錯誤：${(await response.text()).slice(0, 200)}`;
         const data = await response.json();

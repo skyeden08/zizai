@@ -2,12 +2,19 @@ export function createModule({ id, capabilities = [], initialize, actions = {}, 
   if (!id) throw new Error("Module id is required");
   const actionNames = new Set(Object.keys(actions));
   const beforeReady = new Set(lifecycle.beforeReady || []);
-  const actionLifecycle = Object.freeze(Object.fromEntries([...actionNames].map(action => [action, beforeReady.has(action) ? "before-ready" : "ready"])))
-  return Object.freeze({
+  let module;
+  const lifecycleMap = Object.freeze(Object.fromEntries(
+    [...actionNames].map(action => [action, beforeReady.has(action) ? "before-ready" : "ready"])
+  ));
+  module = Object.freeze({
     id,
     capabilities: Object.freeze([...capabilities]),
-    lifecycle: actionLifecycle,
-    get ready() { return Promise.resolve().then(() => ready()); },
+    lifecycle: lifecycleMap,
+    get ready() {
+      const value = ready();
+      if (value && typeof value.then === "function") return value.then(Boolean);
+      return Boolean(value);
+    },
     initialize: initialize || (async () => {}),
     async call(action, ...args) {
       if (!actionNames.has(action)) throw new Error(`Unsupported action: ${id}.${action}`);
@@ -16,4 +23,5 @@ export function createModule({ id, capabilities = [], initialize, actions = {}, 
     },
     has(action) { return actionNames.has(action); }
   });
+  return module;
 }
