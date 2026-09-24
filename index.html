@@ -38,9 +38,8 @@
   }
   layout.insertAdjacentHTML("afterbegin", '<div class="resizer" data-left="aux" data-right="chat"></div>');
   layout.insertAdjacentHTML("beforeend", '<div class="resizer" data-left="chat" data-right="view"></div>');
-  const script = document.createElement("script");
-  script.src = "core/zizai.js";
-  document.body.appendChild(script);
+  for (const src of ["modules/github.js", "modules/gemini.js"]) { const s=document.createElement("script"); s.src=src; document.body.appendChild(s); await new Promise((resolve,reject)=>{s.onload=resolve;s.onerror=()=>reject(new Error("功能模組載入失敗："+src));}); }
+  const script=document.createElement("script"); script.src="core/zizai.js"; document.body.appendChild(script);
 }
 loadUIModules().catch(err => {
   document.body.innerHTML = '<div style="padding:24px;font-family:sans-serif">ZIZAI UI 載入失敗：' + err.message + '</div>';
