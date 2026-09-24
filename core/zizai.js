@@ -295,7 +295,7 @@ function renderTopicHistory() {
     list.appendChild(chip);
   });
 }
-function parseGithubCall(text){const m=text.match(/\\[github_call\\]([\\s\\S]*?)\\[\\/github_call\\]/);if(!m)return null;try{return JSON.parse(m[1].trim())}catch(e){return{error:"GitHub 請求格式錯誤"}}}
+function parseGithubCall(text){const start=text.indexOf("[github_call]"),end=text.indexOf("[/github_call]");if(start<0||end<start)return null;try{return JSON.parse(text.slice(start+13,end).trim())}catch(e){return{error:"GitHub 請求格式錯誤"}}}
 async function executeModuleCall(req){if(!req)return null;if(req.error)return req.error;const m=window.ZIZAI_MODULES[req.module||"github"];if(!m)throw Error("找不到可調用模組："+(req.module||"github"));if(req.action==="read")return await m.read(req.path);if(req.action==="write")return await m.write(req.path,req.content||"",req.message||"ZIZAI 模組寫入");throw Error("不支援的模組動作："+req.action)}
 async function sendMessage(){
   const input=document.getElementById("chatInput");const text=(input.value||"").trim();if(!text)return;input.value="";addBubble("user",text);
