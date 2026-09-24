@@ -353,7 +353,9 @@ function handleCredential(resp) {
   document.getElementById("userName").textContent = payload.name || payload.email || "";
   document.getElementById("connectDriveBtn").style.display = "inline-block";
   setGithubStatus(true, "已登入");
-  loadGithubTokenFromDrive().then(() => loadGeminiKeyFromDrive());
+  loadGithubTokenFromDrive().then(() => loadGeminiKeyFromDrive()).then(() => {
+    if (window.google?.accounts?.oauth2 && !accessToken) connectDrive();
+  });
 }
 function signOut() {
   accessToken = null; stateFileId = null; githubToken = null; geminiKey = null;
