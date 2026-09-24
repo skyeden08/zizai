@@ -19,7 +19,8 @@ export class ModuleRegistry {
   async call(id, action, ...args) {
     const module = this.get(id);
     if (!module) throw new Error(`Module not found: ${id}`);
-    if (!(await module.ready)) throw new Error(`Module not ready: ${id}`);
+    const lifecycle = module.lifecycle?.[action] || "ready";
+    if (lifecycle !== "before-ready" && !(await module.ready)) throw new Error(`Module not ready: ${id}`);
     return module.call(action, ...args);
   }
 }

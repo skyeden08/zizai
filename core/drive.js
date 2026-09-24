@@ -25,7 +25,7 @@ export function createDriveModule({ auth, config, onStatus } = {}) {
   };
   const find = async name => (await (await api(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name='${name}' and trashed=false`)}&fields=files(id,name)`)).json()).files || [];
   return createModule({
-    id: "drive", capabilities: ["authorize", "read", "write", "upload", "delete"],
+    id: "drive", capabilities: ["authorize", "read", "write", "upload", "delete"], lifecycle: { beforeReady: ["authorize"] },
     ready: async () => Boolean(await getToken()),
     actions: {
       authorize: request,
