@@ -1,17 +1,7 @@
-const GITHUB_REPO = "skyeden08/zizai";
-const GITHUB_PATH = "zizai_state.json";
-const GITHUB_API = `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_PATH}`;
-const TOKEN_FILENAME = "zizai_github_token.json";
-const GEMINI_KEY_FILENAME = "zizai_gemini_key.json";
-const GOOGLE_CLIENT_ID = "878639442058-igirv988k2peuk91roici2d180ekimqr.apps.googleusercontent.com";
-const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
-const STATE_FILENAME = "zizai_state.json";
-let accessToken = null;
-let stateFileId = null;
-let tokenClient = null;
-let githubSha = null;
-let githubToken = null;
 let geminiKey = null;
+window.ZIZAI_MODULES=window.ZIZAI_MODULES||{};
+window.ZIZAI_AUTH={getGithubToken:()=>githubToken,getGeminiKey:()=>geminiKey};
+window.ZIZAI_UTILS={utf8ToBase64,base64ToUtf8};
 let isSilentDriveCheck = false;
 let tokenExpiryTimer = null;
 let zizaiState = { 現況: { 定位AI: null, 最後更新: null }, 歷程: [], 主題: { 目前: "", 歷史: [] }, 檔案: [] };
@@ -130,29 +120,8 @@ async function saveGeminiKeyToDrive(key) {
   form.append("file", new Blob([JSON.stringify({ key })], { type: "application/json" }));
   await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", { method: "POST", headers: { Authorization: `Bearer ${accessToken}` }, body: form });
 }
-async function loadStateFromGitHub() {
-  try {
-    const headers = githubToken ? { Authorization: `token ${githubToken}` } : {};
-    const res = await fetch(GITHUB_API, { headers });
-    if (!res.ok) return;
-    const data = await res.json();
-    githubSha = data.sha;
-    const content = base64ToUtf8(data.content.replace(/\n/g, ""));
-    zizaiState = JSON.parse(content);
-    if (!zizaiState.檔案) zizaiState.檔案 = [];
-    if (!zizaiState.主題) zizaiState.主題 = { 目前: "", 歷史: [] };
-    if (!zizaiState.現況) zizaiState.現況 = { 定位AI: null, 最後更新: null };
-    if (!zizaiState.歷程) zizaiState.歷程 = [];
-  } catch (e) {}
-}
-async function saveStateToGitHub() {
-  if (!githubToken) return;
-  try {
-    const body = { message: "update zizai state", content: utf8ToBase64(JSON.stringify(zizaiState, null, 2)), sha: githubSha };
-    const res = await fetch(GITHUB_API, { method: "PUT", headers: { Authorization: `token ${githubToken}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (res.ok) { const data = await res.json(); githubSha = data.content.sha; }
-  } catch (e) {}
-}
+async function loadStateFromGitHub(){try{const m=window.ZIZAI_MODULES.github;if(!m||!m.ready)return;const d=await m.read(STATE_FILENAME);githubSha=d.sha;zizaiState=JSON.parse(d.content);if(!zizaiState.檔案)zizaiState.檔案=[];if(!zizaiState.主題)zizaiState.主題={目前:"",歷史:[]};if(!zizaiState.現況)zizaiState.現況={定位AI:null,最後更新:null};if(!zizaiState.歷程)zizaiState.歷程=[]}catch(e){}}
+async function saveStateToGitHub(){try{const m=window.ZIZAI_MODULES.github;if(!m||!m.ready)return;const d=await m.write(STATE_FILENAME,JSON.stringify(zizaiState,null,2),"update zizai state");githubSha=d.sha||githubSha}catch(e){}}
 async function backupToDrive() {
   if (!accessToken) return;
   try {
@@ -297,30 +266,7 @@ function makeResizable() {
     });
   });
 }
-async function callGemini(conversationHistory) {
-  if (!geminiKey) return "尚未設定 Gemini API Key，請先登入並連接密鑰";
-  try {
-    const contents = conversationHistory.map(item => {
-      const role = (item.role === "model" || item.role === "ai" || item.role === "assistant") ? "model" : "user";
-      return { role, parts: [{ text: item.text || "" }] };
-    });
-    if (contents.length && contents[0].role !== "user") {
-      contents.unshift({ role: "user", parts: [{ text: "（系統）請依 ZIZAI 定位、對位、執行、驗證方式回應。" }] });
-    }
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents })
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      return "Gemini 錯誤：" + errText.slice(0, 200);
-    }
-    const data = await res.json();
-    const reply = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] ? data.candidates[0].content.parts[0].text : "（無回應）";
-    return reply;
-  } catch (e) {
-    return "Gemini 呼叫失敗：" + e.message;
-  }
-}
+async function callGemini(conversationHistory){const m=window.ZIZAI_MODULES.gemini;if(!m)return"Gemini 模組尚未載入";return m.generate(conversationHistory)}
 function setTopic(text) {
   text = (text || "").trim();
   if (!text) return;
