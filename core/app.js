@@ -23,8 +23,6 @@ export async function bootstrap() {
   });
   const refreshState = () => safe("State render", async () => ui.call("renderState", await state.call("get")));
 
-  // Mount the UI before waiting for optional external services. A failed or
-  // delayed Google script must not prevent the application shell from showing.
   await ui.call("mount", {
     signOut: () => safe("Sign out", () => auth?.call("signOut")),
     connectDrive: () => safe("Drive authorize", () => registry.call("drive", "authorize")),
@@ -115,6 +113,7 @@ export async function bootstrap() {
     },
     onSignedOut: () => ui.call("setSignedOut")
   });
+
   drive = createDriveModule({ auth, config: CONFIG, onStatus: (ok, text) => ui.call("setStatus", "driveStatus", text, ok) });
   const github = createGitHubModule({ auth, config: CONFIG });
   const gemini = createGeminiModule({ auth, config: CONFIG });
