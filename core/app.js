@@ -1,6 +1,5 @@
 import { ModuleRegistry } from "./registry.js";
 import { CONFIG } from "./config.js";
-import { waitForGoogle } from "./google-ready.js";
 import { createAuthModule } from "./auth.js";
 import { createDriveModule } from "./drive.js";
 import { createGitHubModule } from "./github.js";
@@ -83,14 +82,7 @@ export async function bootstrap() {
     }
   });
 
-  let google;
-  try {
-    google = await waitForGoogle();
-  } catch (error) {
-    await ui.call("setStatus", "githubStatus", "Google 未就緒：登入功能不可用", false);
-    console.error("Google Identity Services unavailable", error);
-  }
-
+  const google = globalThis.google;
   auth = createAuthModule({
     google,
     clientId: CONFIG.googleClientId,
@@ -124,5 +116,27 @@ export async function bootstrap() {
   [auth, drive, github, gemini, state, bridge, chat].forEach(module => registry.register(module));
   const results = await registry.initializeAll();
   globalThis.ZIZAI = Object.freeze({ registry, ready: results });
+
+  // Google Identity Services may load after the page. Do not block ZIZAI startup on it.
+  if (!google?.accounts?.id) {
+    const started = Date.now();
+    const attachGoogleWhenReady = async () => {
+      while (!globalThis.google?.accounts?.id && Date.now() - started < 10000) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      if (!globalThis.google?.accounts?.id) {
+        await ui.call("setStatus", "githubStatus", "Google 未就緒：登入功能不可用", false);
+        return;
+      }
+      try {
+        await registry.call("auth", "attachGoogle", globalThis.google);
+        await auth.initialize();
+      } catch (error) {
+        console.error("Google Identity Services initialization failed", error);
+        await ui.call("setStatus", "githubStatus", "Google 登入初始化失敗", false);
+      }
+    };
+    attachGoogleWhenReady();
+  }
   return globalThis.ZIZAI;
 }
