@@ -17,6 +17,11 @@
   <div id="uiHeader"></div>
   <div class="layout" id="uiLayout"></div>
 </div>
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js?v=5").catch(() => {});
+  }
+</script>
 <script type="module">
   import { bootstrap } from "./core/app.js";
   bootstrap().catch(error => {
