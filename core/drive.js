@@ -9,7 +9,8 @@ export function createDriveModule({ auth, config, onStatus } = {}) {
     return new Promise((resolve, reject) => {
       tokenClient.callback = async response => {
         if (response.error) { onStatus?.(false, "授權失敗"); reject(new Error(response.error)); return; }
-        await auth.call("setDriveToken", response.access_token); clearTimeout(expiryTimer);
+        await auth.call("setDriveToken", response.access_token);
+        clearTimeout(expiryTimer);
         expiryTimer = setTimeout(() => { auth.call("setDriveToken", null); onStatus?.(false, "備份逾時"); }, Math.max(1, (response.expires_in || 3600) - 60) * 1000);
         onStatus?.(true, "密鑰／備份已連線"); resolve(response.access_token);
       };
