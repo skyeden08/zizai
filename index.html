@@ -364,7 +364,39 @@ function signOut() {
   google.accounts.id.disableAutoSelect();
 }
 function connectDrive() {
-  if (tokenClient) tokenClient.requestAccessToken({ prompt: "" });
+  if (!window.google || !google.accounts || !google.accounts.oauth2) {
+    setDriveStatus(false, "Google 授權尚未準備好");
+    return;
+  }
+  if (!tokenClient) {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: DRIVE_SCOPE,
+      callback: async (resp) => {
+        if (resp.error) {
+          setDriveStatus(false, "授權失敗");
+          return;
+        }
+        accessToken = resp.access_token;
+        setDriveStatus(true, "備份已連線");
+        if (tokenExpiryTimer) clearTimeout(tokenExpiryTimer);
+        tokenExpiryTimer = setTimeout(() => {
+          accessToken = null;
+          setDriveStatus(false, "備份逾時");
+        }, (resp.expires_in || 3600) * 1000 - 60000);
+        try {
+          await loadDriveFileId();
+          await loadGithubTokenFromDrive();
+          await loadGeminiKeyFromDrive();
+          await backupToDrive();
+          setDriveStatus(true, "密鑰／備份已連線");
+        } catch (e) {
+          setDriveStatus(false, "Drive 讀取失敗");
+        }
+      }
+    });
+  }
+  tokenClient.requestAccessToken({ prompt: "consent" });
 }
 async function loadDriveFileId() {
   if (!accessToken) return;
