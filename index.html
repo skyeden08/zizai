@@ -14,146 +14,37 @@
 </head>
 <body>
 <div class="app">
-  <header>
-    <div class="brand">
-      <span class="mark">ZIZAI</span>
-      <span class="tag">主體 · 自在</span>
-    </div>
-    <div class="status">
-      <span id="githubStatus"><span class="dot" id="githubDot"></span>尚未登入</span>
-      <span id="driveStatus"><span class="dot" id="driveDot"></span>備份未連線</span>
-      <div class="topic-widget" id="settingsWidget">
-        <button class="btn-ghost" id="settingsToggle" onclick="toggleSettingsDropdown(event)">設定 ⚙</button>
-        <div class="topic-dropdown" id="settingsDropdown" style="right:0; width:220px;">
-          <p class="core-sub-text">金鑰管理、模型選擇、通知偏好等設定項目，之後陸續補上。</p>
-        </div>
-      </div>
-      <div id="signinBtn"></div>
-      <div class="userchip" id="userChip">
-        <img id="userAvatar" src="" alt="">
-        <span id="userName"></span>
-        <button class="btn-ghost" id="connectDriveBtn" style="display:none;" onclick="connectDrive()">連接密鑰／備份</button>
-        <button class="btn-ghost" onclick="signOut()">登出</button>
-      </div>
-    </div>
-  </header>
-  <div class="layout">
-    <section class="panel" id="aux">
-      <div class="panel-head">
-        <h2>輔助區</h2>
-        <button class="fold-btn" onclick="toggleFold('aux')">‹</button>
-      </div>
-      <div class="panel-body" id="logBody">
-        <div class="aux-option" id="coreOption">
-          <div class="aux-option-head" onclick="toggleAuxOption('coreOption')">
-            <span>主體中樞</span>
-            <span class="opt-arrow">›</span>
-          </div>
-          <div class="aux-option-body">
-            <div class="aux-option" id="coreDocOption">
-              <div class="aux-option-head" onclick="toggleAuxOption('coreDocOption')">
-                <span>主體中樞文件</span>
-                <span class="opt-arrow">›</span>
-              </div>
-              <div class="aux-option-body">
-                <p class="core-sub-text">ZIZAI 運作規則與說明書。<br><a href="https://github.com/skyeden08/zizai/blob/main/README.md" target="_blank" rel="noopener">在 GitHub 上查看 →</a></p>
-              </div>
-            </div>
-            <div class="aux-option" id="coreStatusOption">
-              <div class="aux-option-head" onclick="toggleAuxOption('coreStatusOption')">
-                <span>主體中樞現況</span>
-                <span class="opt-arrow">›</span>
-              </div>
-              <div class="aux-option-body">
-                <p class="core-sub-text" id="coreStatusText">尚無現況資料</p>
-              </div>
-            </div>
-            <div class="aux-option" id="coreHistoryOption">
-              <div class="aux-option-head" onclick="toggleAuxOption('coreHistoryOption')">
-                <span>主體中樞歷程</span>
-                <span class="opt-arrow">›</span>
-              </div>
-              <div class="aux-option-body">
-                <p class="empty-hint">整理規則待後續討論</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="aux-option" id="collabOption">
-          <div class="aux-option-head" onclick="toggleAuxOption('collabOption')">
-            <span>協作</span>
-            <span class="opt-arrow">›</span>
-          </div>
-          <div class="aux-option-body">
-            <ul class="ai-status-list">
-              <li><span class="ai-name">Grok</span><span class="ai-state on">已接入</span></li>
-              <li><span class="ai-name">Claude</span><span class="ai-state off">未接入</span></li>
-              <li><span class="ai-name">ChatGPT</span><span class="ai-state off">未接入</span></li>
-              <li><span class="ai-name">Gemini</span><span class="ai-state off" id="geminiStatus">未接入</span></li>
-            </ul>
-          </div>
-        </div>
-        <div class="aux-option" id="historyOption">
-          <div class="aux-option-head" onclick="toggleAuxOption('historyOption')">
-            <span>流水帳</span>
-            <span class="opt-arrow">›</span>
-          </div>
-          <div class="aux-option-body">
-            <div id="historyList">
-              <p class="empty-hint">系統歷程將顯示於此</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-    <div class="resizer" data-left="aux" data-right="chat"></div>
-    <section class="panel" id="chat">
-      <div class="panel-head">
-        <h2>對話區</h2>
-        <div class="topic-widget" id="topicWidget">
-          <button class="topic-toggle" id="topicToggle" onclick="toggleTopicDropdown(event)">
-            <span id="topicBadge">設定主題</span>
-            <span class="opt-arrow" id="topicArrow">›</span>
-          </button>
-          <div class="topic-dropdown" id="topicDropdown">
-            <input type="text" id="topicInput" class="topic-input" placeholder="輸入目前對話主題，按 Enter 標記…">
-            <div id="topicHistoryList" class="topic-history"></div>
-          </div>
-        </div>
-      </div>
-      <div class="panel-body" id="chatScroll">
-        <div class="bubble ai">歡迎回到 ZIZAI。提出需求，我會依定位、對位、執行、驗證的方式回應。</div>
-      </div>
-      <div class="chat-input-bar">
-        <textarea id="chatInput" placeholder="輸入需求…（Enter 送出，Shift+Enter 換行）"></textarea>
-        <button onclick="sendMessage()">送出</button>
-      </div>
-    </section>
-    <div class="resizer" data-left="chat" data-right="view"></div>
-    <section class="panel" id="view">
-      <div class="panel-head">
-        <h2>共視區</h2>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <div class="topic-widget" id="fileWidget">
-            <button class="topic-toggle" id="fileToggle" onclick="toggleFileDropdown(event)">
-              <span id="fileBadge">檔案</span>
-              <span class="opt-arrow" id="fileArrow">›</span>
-            </button>
-            <div class="topic-dropdown" id="fileDropdown" style="right:0;">
-              <input type="file" id="fileInput" style="display:none;" onchange="handleFileSelect(event)">
-              <button class="btn-ghost" style="width:100%; margin-bottom:8px;" onclick="document.getElementById('fileInput').click()">＋ 上傳檔案</button>
-              <div id="fileList"><p class="empty-hint">尚無檔案</p></div>
-            </div>
-          </div>
-          <button class="fold-btn" onclick="toggleFold('view')">›</button>
-        </div>
-      </div>
-      <div class="panel-body" id="resultBody">
-        <p class="empty-hint">執行成果將顯示於此</p>
-      </div>
-    </section>
-  </div>
+  <div id="uiHeader"></div>
+  <div class="layout" id="uiLayout"></div>
 </div>
-<script src="core/zizai.js"></script>
+<script>async function loadUIModules() {
+  const modules = [
+    ["header", "ui/modules/header.html"],
+    ["aux", "ui/modules/aux.html"],
+    ["chat", "ui/modules/chat.html"],
+    ["view", "ui/modules/view.html"]
+  ];
+  const header = document.getElementById("uiHeader");
+  const layout = document.getElementById("uiLayout");
+  if (!header || !layout) throw new Error("ZIZAI UI mount point missing");
+  const results = await Promise.all(modules.map(async ([id, path]) => {
+    const res = await fetch(path, { cache: "no-store" });
+    if (!res.ok) throw new Error("UI module load failed: " + path);
+    return [id, await res.text()];
+  }));
+  for (const [id, html] of results) {
+    if (id === "header") header.innerHTML = html;
+    else layout.insertAdjacentHTML("beforeend", html);
+  }
+  layout.insertAdjacentHTML("afterbegin", '<div class="resizer" data-left="aux" data-right="chat"></div>');
+  layout.insertAdjacentHTML("beforeend", '<div class="resizer" data-left="chat" data-right="view"></div>');
+  const script = document.createElement("script");
+  script.src = "core/zizai.js";
+  document.body.appendChild(script);
+}
+loadUIModules().catch(err => {
+  document.body.innerHTML = '<div style="padding:24px;font-family:sans-serif">ZIZAI UI 載入失敗：' + err.message + '</div>';
+});
+</script>
 </body>
 </html>
