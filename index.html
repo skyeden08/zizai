@@ -1,2 +1,28 @@
 <!DOCTYPE html>
-<html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ZIZAI · 主體</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#3F6F63"><link rel="stylesheet" href="ui/zizai.css"><script src="https://accounts.google.com/gsi/client" async defer></script></head><body><div class="app"><div id="uiHeader"></div><div class="layout" id="uiLayout"></div></div><script type="module">import { bootstrap } from "./core/app.js"; bootstrap().catch(error => { console.error("ZIZAI bootstrap failed", error); document.body.insertAdjacentHTML("beforeend", `<p class="empty-hint">ZIZAI 初始化失敗：${error.message}</p>`); });</script></body></html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZIZAI · 主體</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3F6F63">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="stylesheet" href="ui/zizai.css">
+</head>
+<body>
+<div class="app">
+  <div id="uiHeader"></div>
+  <div class="layout" id="uiLayout"></div>
+</div>
+<script type="module">
+  import { bootstrap } from "./core/app.js";
+  bootstrap().catch(error => {
+    console.error("ZIZAI bootstrap failed", error);
+    document.body.insertAdjacentHTML("beforeend", `<p class="empty-hint">ZIZAI 初始化失敗：${error.message}</p>`);
+  });
+</script>
+</body>
+</html>
