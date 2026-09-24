@@ -60,7 +60,7 @@ function handleCredential(resp) {
   document.getElementById("userName").textContent = payload.name || payload.email || "";
   document.getElementById("connectDriveBtn").style.display = "inline-block";
   setGithubStatus(true, "已登入");
-  loadGithubTokenFromDrive().then(() => loadGeminiKeyFromDrive());
+  loadGithubTokenFromDrive().then(() => loadStateFromGitHub()).then(() => { renderCoreStatus(); renderTopicHistory(); renderFileList(); }).then(() => loadGeminiKeyFromDrive());
 }
 function signOut() {
   accessToken = null; stateFileId = null; githubToken = null; geminiKey = null;
