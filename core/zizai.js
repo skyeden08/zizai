@@ -295,20 +295,24 @@ function renderTopicHistory() {
     list.appendChild(chip);
   });
 }
-function sendMessage() {
-  const input = document.getElementById("chatInput");
-  const text = (input.value || "").trim();
-  if (!text) return;
-  input.value = "";
-  addBubble("user", text);
-  const history = [];
-  document.querySelectorAll("#chatScroll .bubble").forEach(b => {
-    history.push({ role: b.classList.contains("user") ? "user" : "model", text: b.textContent });
-  });
-  callGemini(history).then(reply => {
-    addBubble("ai", reply);
-    addResultCard("Gemini 回應", reply.slice(0, 200) + (reply.length > 200 ? "…" : ""));
-  });
+function parseGithubCall(text){const m=text.match(/\\[github_call\\]([\\s\\S]*?)\\[\\/github_call\\]/);if(!m)return null;try{return JSON.parse(m[1].trim())}catch(e){return{error:"GitHub 請求格式錯誤"}}}
+async function executeModuleCall(req){if(!req)return null;if(req.error)return req.error;const m=window.ZIZAI_MODULES[req.module||"github"];if(!m)throw Error("找不到可調用模組："+(req.module||"github"));if(req.action==="read")return await m.read(req.path);if(req.action==="write")return await m.write(req.path,req.content||"",req.message||"ZIZAI 模組寫入");throw Error("不支援的模組動作："+req.action)}
+async function sendMessage(){
+  const input=document.getElementById("chatInput");const text=(input.value||"").trim();if(!text)return;input.value="";addBubble("user",text);
+  let history=[];document.querySelectorAll("#chatScroll .bubble").forEach(b=>history.push({role:b.classList.contains("user")?"user":"model",text:b.textContent}));
+  for(let i=0;i<3;i++){
+    const reply=await callGemini(history);const req=parseGithubCall(reply);
+    if(!req){addBubble("ai",reply);addResultCard("Gemini 回應",reply.slice(0,200)+(reply.length>200?"…":""));return}
+    try{
+      const result=await executeModuleCall(req);
+      history.push({role:"model",text:reply},{role:"user",text:"（ZIZAI 模組執行結果）"+JSON.stringify(result)});
+      addResultCard("ZIZAI · "+(req.module||"GitHub")+" 模組",JSON.stringify(result).slice(0,500));
+    }catch(e){
+      history.push({role:"model",text:reply},{role:"user",text:"（ZIZAI 模組執行錯誤）"+e.message});
+      addResultCard("ZIZAI · 模組錯誤",e.message);
+    }
+  }
+  addBubble("ai","模組調用已達本次循環上限，請繼續下達指令。");
 }
 function addBubble(role, text) {
   const scroll = document.getElementById("chatScroll");
