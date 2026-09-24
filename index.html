@@ -345,8 +345,15 @@ function setDriveStatus(ok, text) {
   const el = document.getElementById("driveStatus");
   if (el) el.innerHTML = `<span class="dot ${ok ? "on" : ""}" id="driveDot"></span>${text}`;
 }
+function decodeJwtPayload(credential) {
+  const part = credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+  const padded = part + "=".repeat((4 - part.length % 4) % 4);
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+}
 function handleCredential(resp) {
-  const payload = JSON.parse(atob(resp.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+  const payload = decodeJwtPayload(resp.credential);
   document.getElementById("signinBtn").style.display = "none";
   document.getElementById("userChip").style.display = "flex";
   document.getElementById("userAvatar").src = payload.picture || "";
