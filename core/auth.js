@@ -1,6 +1,7 @@
 import { createModule } from "./contract.js";
 
 export function createAuthModule({ google = globalThis.google, clientId, onUser, onStatus, onSignedOut } = {}) {
+  let googleRef = google ?? globalThis.google;
   let user = null;
   let driveToken = null;
   let githubToken = null;
@@ -14,8 +15,10 @@ export function createAuthModule({ google = globalThis.google, clientId, onUser,
   return createModule({
     id: "auth",
     capabilities: ["signin", "signout", "credentials", "restore"],
-    ready: () => Boolean(google?.accounts?.id),
+    lifecycle: { beforeReady: ["attachGoogle"] },
+    ready: () => Boolean(googleRef?.accounts?.id),
     actions: {
+      attachGoogle: nextGoogle => { googleRef = nextGoogle ?? globalThis.google; return Boolean(googleRef?.accounts?.id); },
       getUser: () => user,
       getGithubToken: () => githubToken,
       getGeminiKey: () => geminiKey,
@@ -35,14 +38,14 @@ export function createAuthModule({ google = globalThis.google, clientId, onUser,
       signOut: () => {
         user = null;
         driveToken = githubToken = geminiKey = null;
-        google?.accounts?.id?.disableAutoSelect?.();
+        googleRef?.accounts?.id?.disableAutoSelect?.();
         notify(false, "尚未登入");
         onSignedOut?.();
       }
     },
     initialize: async () => {
-      if (!google?.accounts?.id) throw new Error("Google Identity Services is unavailable");
-      google.accounts.id.initialize({ client_id: clientId, auto_select: true, callback: credential => {
+      if (!googleRef?.accounts?.id) return false;
+      googleRef.accounts.id.initialize({ client_id: clientId, auto_select: true, callback: credential => {
         try {
           user = parseCredential(credential.credential);
           notify(true, "已登入");
@@ -53,8 +56,9 @@ export function createAuthModule({ google = globalThis.google, clientId, onUser,
         }
       }});
       const target = document.getElementById("signinBtn");
-      if (target) google.accounts.id.renderButton(target, { theme: "outline", size: "medium", text: "signin", shape: "pill" });
-      google.accounts.id.prompt();
+      if (target) googleRef.accounts.id.renderButton(target, { theme: "outline", size: "medium", text: "signin", shape: "pill" });
+      googleRef.accounts.id.prompt();
+      return true;
     }
   });
 }
