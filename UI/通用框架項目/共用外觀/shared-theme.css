@@ -1,0 +1,27 @@
+/**
+ * ZIZAI UI - 共用外觀第一版：集中外觀設定
+ * 路徑：UI/通用框架項目/共用外觀/shared-theme.css
+ */
+:root {
+  --zizai-color-primary: #2563eb;
+  --zizai-color-primary-hover: #1d4ed8;
+  --zizai-color-background: #ffffff;
+  --zizai-color-surface: #f8fafc;
+  --zizai-color-text: #1e293b;
+  --zizai-color-text-muted: #64748b;
+  --zizai-color-border: #e2e8f0;
+  
+  --zizai-spacing-xs: 4px;
+  --zizai-spacing-sm: 8px;
+  --zizai-spacing-md: 16px;
+  --zizai-spacing-lg: 24px;
+  
+  --zizai-radius-sm: 4px;
+  --zizai-radius-md: 8px;
+  --zizai-radius-lg: 12px;
+  
+  --zizai-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --zizai-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  
+  --zizai-font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
