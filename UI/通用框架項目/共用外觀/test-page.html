@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>ZIZAI UI - 共用外觀獨立驗證測試頁（最終定稿版）</title>
+  <link rel="stylesheet" href="./shared-theme.css">
+  <script src="./shared-appearance.js" defer></script>
+  <style>
+    body {
+      font-family: var(--zizai-font-family);
+      background-color: var(--zizai-color-background);
+      color: var(--zizai-color-text);
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    h1 {
+      font-size: 1.5rem;
+      border-bottom: 2px solid var(--zizai-color-border);
+      padding-bottom: 8px;
+    }
+    .control-panel, .dom-test-panel {
+      margin-bottom: 24px;
+      padding: 16px;
+      background: var(--zizai-color-surface);
+      border: 1px solid var(--zizai-color-border);
+      border-radius: var(--zizai-radius-md);
+    }
+    button {
+      background-color: var(--zizai-color-primary);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: var(--zizai-radius-sm);
+      cursor: pointer;
+      font-weight: 500;
+      margin-right: 8px;
+    }
+    button:hover {
+      background-color: var(--zizai-color-primary-hover);
+    }
+    .external-box {
+      margin-top: 12px;
+      padding: 12px;
+      background-color: var(--zizai-color-surface);
+      border: 1px solid var(--zizai-color-border);
+      border-radius: var(--zizai-radius-sm);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>ZIZAI 共用外觀獨立驗證（最終定稿版）</h1>
+  
+  <div class="control-panel">
+    <h3>1. 全域變數主題連動驗證</h3>
+    <p>點擊按鈕變更 :root 變數，驗證 <shared-appearance> 內部與外部元素是否同步連動：</p>
+    <button id="themeToggleBtn">切換主題色彩 (預設藍 / 墨綠)</button>
+    <div class="external-box" id="externalBox">
+      外部對照區塊：使用相同變數（--zizai-color-surface），驗證全域同步。
+    </div>
+  </div>
+
+  <div class="dom-test-panel">
+    <h3>2. DOM 卸載與重新插入驗證</h3>
+    <p>測試將共用外觀元件暫時移出 DOM 再重新掛載，檢查內部內容與狀態是否完整保留：</p>
+    <button id="moveDomBtn">將測試元件移至容器 B</button>
+    <div id="containerA" style="margin-top: 12px; border: 1px dashed #cbd5e1; padding: 12px;">
+      <strong>容器 A：</strong>
+      <shared-appearance id="testWidget">
+        <h3 style="margin-top:0;">測試模組單元 A</h3>
+        <p id="counterText">互動計數器：0</p>
+        <button id="countBtn" type="button">點擊增加計數</button>
+      </shared-appearance>
+    </div>
+    <div id="containerB" style="margin-top: 12px; border: 1px dashed #cbd5e1; padding: 12px;">
+      <strong>容器 B：</strong> (目標放置區)
+    </div>
+  </div>
+
+  <script>
+    // 1. 動態主題切換邏輯
+    const root = document.documentElement;
+    const btn = document.getElementById('themeToggleBtn');
+    let isAlternate = false;
+
+    btn.addEventListener('click', () => {
+      isAlternate = !isAlternate;
+      if (isAlternate) {
+        root.style.setProperty('--zizai-color-primary', '#047857');
+        root.style.setProperty('--zizai-color-primary-hover', '#065f46');
+        root.style.setProperty('--zizai-color-surface', '#ecfdf5');
+      } else {
+        root.style.setProperty('--zizai-color-primary', '#2563eb');
+        root.style.setProperty('--zizai-color-primary-hover', '#1d4ed8');
+        root.style.setProperty('--zizai-color-surface', '#f8fafc');
+      }
+    });
+
+    // 2. 內部互動狀態維護測試
+    let count = 0;
+    const countBtn = document.getElementById('countBtn');
+    const counterText = document.getElementById('counterText');
+    countBtn.addEventListener('click', () => {
+      count++;
+      counterText.textContent = `互動計數器：${count}`;
+    });
+
+    // 3. DOM 搬移測試邏輯
+    const moveDomBtn = document.getElementById('moveDomBtn');
+    const containerA = document.getElementById('containerA');
+    const containerB = document.getElementById('containerB');
+    const testWidget = document.getElementById('testWidget');
+    let isInContainerA = true;
+
+    moveDomBtn.addEventListener('click', () => {
+      if (isInContainerA) {
+        containerB.appendChild(testWidget);
+        moveDomBtn.textContent = "將測試元件移回容器 A";
+        isInContainerA = false;
+      } else {
+        containerA.appendChild(testWidget);
+        moveDomBtn.textContent = "將測試元件移至容器 B";
+        isInContainerA = true;
+      }
+    });
+  </script>
+
+</body>
+</html>
