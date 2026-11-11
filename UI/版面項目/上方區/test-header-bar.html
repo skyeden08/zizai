@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>ZIZAI 上方區 V1 驗證</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f3f4f6; }
+    .wrapper { max-width: 1000px; margin: 40px auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+    .desc { padding: 20px 24px; border-bottom: 1px solid #e5e7eb; }
+    .desc h2 { margin: 0 0 8px; font-size: 1.25rem; }
+    .desc p { margin: 0; color: #4b5563; font-size: 0.875rem; }
+    .log { padding: 20px 24px; background: #1f2937; color: #f3f4f6; font-family: monospace; font-size: 0.875rem; height: 200px; overflow-y: auto; white-space: pre-wrap; }
+    .success { color: #34d399; font-weight: bold; }
+  </style>
+  <script src="../../通用框架項目/事件處理/zizai-events.js"></script>
+  <script src="./zizai-header-bar.js"></script>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="desc">
+      <h2>上方區元件驗證 (Header Bar V1)</h2>
+      <p>驗證：左側 ZIZAI 名稱、右側 Banner 預留位、點擊 Logo 觸發 zizai-header-click 事件。</p>
+    </div>
+    <zizai-header-bar id="my-header"></zizai-header-bar>
+    <div class="log" id="log-output">[系統] 等待執行驗證...\n</div>
+  </div>
+
+  <script>
+    const logOutput = document.getElementById('log-output');
+    function log(msg, isSuccess) {
+      const cls = isSuccess ? 'success' : '';
+      logOutput.innerHTML += '<span class="' + cls + '">' + msg + '</span>\n';
+      logOutput.scrollTop = logOutput.scrollHeight;
+    }
+
+    const headerElement = document.getElementById('my-header');
+    let testPassed = false;
+
+    headerElement.addEventListener('zizai-header-click', function(event) {
+      log('接收到事件: [' + event.type + ']', true);
+      log('  - 來源: ' + (event.detail && event.detail.source));
+      log('  - 資料: ' + JSON.stringify(event.detail && event.detail.data));
+      log('  - 時間: ' + (event.detail && event.detail.timestamp));
+
+      if (event.detail && event.detail.source === 'zizai-header-bar' &&
+          event.detail.data && event.detail.data.action === 'brand-logo-clicked') {
+        testPassed = true;
+        log('🎉 驗證成功：上方區事件與結構符合規範！', true);
+      }
+    });
+
+    setTimeout(function() {
+      log('-> 正在模擬點擊左側 ZIZAI Logo...');
+      const brandArea = headerElement.shadowRoot && headerElement.shadowRoot.getElementById('brand-area');
+      if (brandArea) {
+        brandArea.click();
+      } else {
+        log('❌ 找不到 brand-area', false);
+      }
+
+      setTimeout(function() {
+        if (testPassed) {
+          log('=== 最終結果: PASSED ===', true);
+        } else {
+          log('=== 最終結果: FAILED ===', false);
+        }
+      }, 100);
+    }, 300);
+  </script>
+</body>
+</html>
