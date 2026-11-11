@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZIZAI Right Panel V1 - Rebuild V4 Difference Fix 2 Suite</title>
+  <style>
+    :root {
+      --zizai-bg-primary: #ffffff;
+      --zizai-bg-secondary: #f4f5f7;
+      --zizai-border-color: #dcdfe6;
+      --zizai-primary: #2563eb;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .test-layout-sandbox {
+      display: flex;
+      gap: 16px;
+      height: 480px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #ffffff;
+      overflow: hidden;
+    }
+
+    .mock-center-panel {
+      flex: 1;
+      padding: 20px;
+      background: #fdfdfd;
+      border-right: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mock-right-wrapper {
+      width: 360px;
+      height: 100%;
+    }
+
+    .report-container {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      max-height: 440px;
+      overflow-y: auto;
+    }
+
+    .badge-pass { color: #4ade80; font-weight: bold; }
+    .badge-fail { color: #f87171; font-weight: bold; }
+    .badge-warn { color: #fbbf24; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <h2>ZIZAI Right Panel V1 Rebuild V4 第二輪局部差異修正測試</h2>
+  <p>本頁面完整驗證 B1 (Minimal Mock previousId 斷言)、N1/N2 (情境 A 與情境 B 回滾事件語意) 及未執行項目統一宣告。</p>
+
+  <div class="test-layout-sandbox">
+    <div class="mock-center-panel">
+      <h3>模擬組件容器 (Shadow Root 獨立性與事件冒泡驗證區)</h3>
+      <p>驗證 Right Panel 具有獨立 Shadow Root 且事件能冒泡傳遞至 document。</p>
+      <div id="event-intent-log" style="margin-top: 10px; padding: 10px; background: #f1f5f9; border-radius: 6px; font-size: 13px;">
+        事件監聽狀態: 準備就緒...
+      </div>
+    </div>
+
+    <div class="mock-right-wrapper">
+      <zizai-right-panel id="right-panel-instance"></zizai-right-panel>
+    </div>
+  </div>
+
+  <h3>V4 局部差異修正 2 測試執行報告</h3>
+  <div id="test-report-output" class="report-container">
+    [測試執行中...]
+  </div>
+
+  <script type="module">
+    import './zizai-right-panel.js';
+
+    const panel = document.getElementById('right-panel-instance');
+    const logEl = document.getElementById('event-intent-log');
+    const reportEl = document.getElementById('test-report-output');
+
+    async function runV4DiffFix2TestBed() {
+      const results = {
+        passed: [],
+        failed: [],
+        environmental: [],
+        notRun: []
+      };
+
+      const assert = (condition, title) => {
+        if (condition) results.passed.push(title);
+        else results.failed.push(title);
+      };
+
+      try {
+        const mockData = [
+          { id: 'dash', label: '個人化協作看板', content: '<div>協作看板主內容</div>' },
+          { id: 'quad', label: '四象分析矩陣', content: '<div>四象分析內容</div>' },
+          { id: 'cog', label: '整體認知現況', content: '<div>認知現況檢視</div>' }
+        ];
+
+        // 1. 初始化不派發變更事件驗證
+        let initEventFired = false;
+        const initListener = () => { initEventFired = true; };
+        panel.addEventListener('zizai-workspace-changed', initListener);
+
+        panel.setWorkspaces(mockData);
+        panel.setFavorites(['dash']);
+
+        panel.removeEventListener('zizai-workspace-changed', initListener);
+        assert(!initEventFired, '初始化及 setWorkspaces 過程不應派發 workspace-changed 事件');
+
+        // 2. 清空 workspaces 後，驗證 _activeId、active-id、select 三者一致
+        panel.setWorkspaces([]);
+        const activeIdCleared = panel.getActiveWorkspace();
+        const attrCleared = panel.hasAttribute('active-id');
+        const selectValue = panel.shadowRoot.querySelector('#workspace-select').value;
+        assert(activeIdCleared === null && !attrCleared && selectValue === '', '清空 workspaces 後，_activeId、active-id、select 三者應同步清空且一致');
+
+        // 恢復資料
+        panel.setWorkspaces(mockData);
+
+        // 3. 補強 N2: 情境 A (目前已是第一個 workspace dash，外部設為空字串 -> attribute 恢復為 dash，active 仍為 dash，不派發事件)
+        panel.setActiveWorkspace('dash', 'programmatic');
+        let scenarioAEventCount = 0;
+        const scenarioAListener = () => { scenarioAEventCount++; };
+        panel.addEventListener('zizai-workspace-changed', scenarioAListener);
+
+        panel.removeAttribute('active-id');
+        await Promise.resolve();
+
+        panel.removeEventListener('zizai-workspace-changed', scenarioAListener);
+
+        assert(
+          panel.getAttribute('active-id') === 'dash' &&
+          panel.getActiveWorkspace() === 'dash' &&
+          scenarioAEventCount === 0,
+          '情境 A: 目前已是第一個 workspace 時外部移除 active-id，屬性正確恢復、狀態維持 dash 且不派發事件'
+        );
+
+        // 4. 補強 N2: 情境 B (目前不是第一個 workspace quad，外部設為空字串 -> 切換回 dash，派發一次 workspace-changed，previousId 為 quad，activeId 為 dash，source 為 attribute_sync)
+        panel.setActiveWorkspace('quad', 'programmatic');
+        let scenarioBEventCount = 0;
+        let scenarioBDetail = null;
+        const scenarioBListener = (e) => {
+          scenarioBEventCount++;
+          scenarioBDetail = e.detail;
+        };
+        panel.addEventListener('zizai-workspace-changed', scenarioBListener);
+
+        panel.setAttribute('active-id', '');
+        await Promise.resolve();
+
+        panel.removeEventListener('zizai-workspace-changed', scenarioBListener);
+
+        assert(
+          scenarioBEventCount === 1 &&
+          panel.getAttribute('active-id') === 'dash' &&
+          panel.getActiveWorkspace() === 'dash' &&
+          scenarioBDetail.source === 'attribute_sync' &&
+          scenarioBDetail.data.previousId === 'quad' &&
+          scenarioBDetail.data.activeId === 'dash',
+          '情境 B: 目前不是第一個 workspace 時外部設為空字串，正確切換回 dash、派發一次 workspace-changed 且 detail 結構與 source 正確'
+        );
+
+        // 5. M2 修復後之 T8 重複呼叫與事件計數測試
+        panel.setActiveWorkspace('dash', 'programmatic');
+        let eventCallCount = 0;
+        let lastEventDetail = null;
+        const countListener = (e) => {
+          eventCallCount++;
+          lastEventDetail = e.detail;
+        };
+        panel.addEventListener('zizai-workspace-changed', countListener);
+
+        panel.setActiveWorkspace('quad', 'programmatic');
+        panel.setActiveWorkspace('quad', 'programmatic');
+
+        panel.removeEventListener('zizai-workspace-changed', countListener);
+
+        assert(
+          eventCallCount === 1 &&
+          lastEventDetail.data.activeId === 'quad' &&
+          lastEventDetail.data.previousId === 'dash',
+          'T8: 先設 dash 再切 quad 僅派發 1 次事件，再次重複呼叫不重複派發，且 detail 結構正確'
+        );
+
+        // 6. M1 修正 Fallback cancelable 驗證
+        let fallbackCancelableChecked = false;
+        const cancelCheckListener = (e) => {
+          fallbackCancelableChecked = e.cancelable === true;
+        };
+        panel.addEventListener('zizai-workspace-changed', cancelCheckListener);
+        panel.setActiveWorkspace('cog', 'programmatic');
+        panel.removeEventListener('zizai-workspace-changed', cancelCheckListener);
+        assert(fallbackCancelableChecked, '原生 CustomEvent fallback 的 cancelable 必須為 true');
+
+        // 7. B1 修正後之 ZizaiEvents Minimal Mock 完整斷言測試 (確保 previousId 斷言為 cog)
+        panel.setActiveWorkspace('cog', 'programmatic');
+        let mockCalled = false;
+        let mockArgs = null;
+        window.ZizaiEvents = {
+          dispatchCustomEvent: (target, eventName, data, source, options) => {
+            mockCalled = true;
+            mockArgs = { target, eventName, data, source, options };
+          }
+        };
+
+        let fallbackTriggeredInMock = false;
+        const fallbackCheck = () => { fallbackTriggeredInMock = true; };
+        panel.addEventListener('zizai-workspace-changed', fallbackCheck);
+
+        panel.setActiveWorkspace('dash', 'programmatic');
+
+        panel.removeEventListener('zizai-workspace-changed', fallbackCheck);
+
+        const mockAssertsPass =
+          mockCalled &&
+          mockArgs.target === panel &&
+          mockArgs.eventName === 'zizai-workspace-changed' &&
+          mockArgs.data.activeId === 'dash' &&
+          mockArgs.data.previousId === 'cog' &&
+          mockArgs.source === 'programmatic' &&
+          mockArgs.options.bubbles === true &&
+          mockArgs.options.composed === true &&
+          mockArgs.options.cancelable === true &&
+          !fallbackTriggeredInMock;
+
+        delete window.ZizaiEvents;
+        assert(mockAssertsPass, 'B1: ZizaiEvents Minimal Mock 完整斷言驗證通過 (previousId 經斷言為 cog，無重複 fallback)');
+
+        // 8. Shadow DOM 獨立性驗證
+        const hasIndependentShadow = panel.shadowRoot !== null && panel.shadowRoot.mode === 'open';
+        let bubbleCaptured = false;
+        const bubbleListener = () => { bubbleCaptured = true; };
+        document.addEventListener('zizai-workspace-changed', bubbleListener, { once: true });
+        panel.setActiveWorkspace('quad', 'programmatic');
+        assert(hasIndependentShadow && bubbleCaptured, '確認 Right Panel 具備獨立 Shadow Root 且事件能正確冒泡傳遞至 document');
+
+        // 9. 明確標示未執行的真實整合項目 (NOT RUN)
+        results.notRun.push('真實 Center Panel 與 Right Panel 雙元件共存整合 (NOT RUN)');
+        results.notRun.push('跨元件 Shadow DOM 樣式隔離 (NOT RUN)');
+        results.notRun.push('Right Panel 與其他元件之間的事件互通 (NOT RUN)');
+        results.notRun.push('真實 zizai-events.js 實體載入驗證 (NOT RUN)');
+
+        results.environmental.push('不同容器尺寸下的版面響應表現 (需 E2E 視覺迴歸測試環境)');
+
+      } catch (err) {
+        results.failed.push(\`測試執行異常: \${err.message}\`);
+      }
+
+      reportEl.innerHTML = \`
+=== ZIZAI Right Panel V1 Rebuild V4 局部差異修正 2 測試報告 ===
+[✓ 已實際執行且通過] (\${results.passed.length}):
+\${results.passed.map(t => \`  - <span class="badge-pass">PASS</span> \${t}\`).join('\\n')}
+
+[✗ 已實際執行但未通過] (\${results.failed.length}):
+\${results.failed.length > 0 ? results.failed.map(t => \`  - <span class="badge-fail">FAIL</span> \${t}\`).join('\\n') : '  (無)'}
+
+[⏳ 尚未執行 (NOT RUN)] (\${results.notRun.length}):
+\${results.notRun.map(t => \`  - <span class="badge-warn">NOT RUN</span> \${t}\`).join('\\n')}
+
+[⚠️ 環境限制] (\${results.environmental.length}):
+\${results.environmental.map(t => \`  - <span class="badge-warn">ENV</span> \${t}\`).join('\\n')}
+      \`;
+    }
+
+    setTimeout(runV4DiffFix2TestBed, 100);
+  </script>
+</body>
+</html>
