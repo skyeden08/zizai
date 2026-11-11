@@ -263,23 +263,23 @@
         results.environmental.push('不同容器尺寸下的版面響應表現 (需 E2E 視覺迴歸測試環境)');
 
       } catch (err) {
-        results.failed.push(\`測試執行異常: \${err.message}\`);
+        results.failed.push(`測試執行異常: ${err.message}`);
       }
 
-      reportEl.innerHTML = \`
+      reportEl.innerHTML = `
 === ZIZAI Right Panel V1 Rebuild V4 局部差異修正 2 測試報告 ===
-[✓ 已實際執行且通過] (\${results.passed.length}):
-\${results.passed.map(t => \`  - <span class="badge-pass">PASS</span> \${t}\`).join('\\n')}
+[✓ 已實際執行且通過] (${results.passed.length}):
+${results.passed.map(t => `  - <span class="badge-pass">PASS</span> ${t}`).join('\n')}
 
-[✗ 已實際執行但未通過] (\${results.failed.length}):
-\${results.failed.length > 0 ? results.failed.map(t => \`  - <span class="badge-fail">FAIL</span> \${t}\`).join('\\n') : '  (無)'}
+[✗ 已實際執行但未通過] (${results.failed.length}):
+${results.failed.length > 0 ? results.failed.map(t => `  - <span class="badge-fail">FAIL</span> ${t}`).join('\n') : '  (無)'}
 
-[⏳ 尚未執行 (NOT RUN)] (\${results.notRun.length}):
-\${results.notRun.map(t => \`  - <span class="badge-warn">NOT RUN</span> \${t}\`).join('\\n')}
+[⏳ 尚未執行 (NOT RUN)] (${results.notRun.length}):
+${results.notRun.map(t => `  - <span class="badge-warn">NOT RUN</span> ${t}`).join('\n')}
 
-[⚠️ 環境限制] (\${results.environmental.length}):
-\${results.environmental.map(t => \`  - <span class="badge-warn">ENV</span> \${t}\`).join('\\n')}
-      \`;
+[⚠️ 環境限制] (${results.environmental.length}):
+${results.environmental.map(t => `  - <span class="badge-warn">ENV</span> ${t}`).join('\n')}
+      `;
     }
 
     setTimeout(runV4DiffFix2TestBed, 100);
