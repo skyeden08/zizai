@@ -5,7 +5,7 @@
  */
 
 const template = document.createElement('template');
-template.innerHTML = \`
+template.innerHTML = `
   <style>
     :host {
       display: flex;
@@ -179,7 +179,7 @@ template.innerHTML = \`
       <p>目前尚無可用項目或未選擇檢視內容</p>
     </div>
   </main>
-\`;
+`;
 
 export class ZizaiRightPanel extends HTMLElement {
   static get observedAttributes() { return ['active-id']; }
@@ -287,7 +287,7 @@ export class ZizaiRightPanel extends HTMLElement {
 
     const previousId = this._activeId;
 
-    if (previousId === id && this._contentContainer.querySelector(\`.workspace-pane[data-id="\${id}"]\`)) {
+    if (previousId === id && this._contentContainer.querySelector(`.workspace-pane[data-id="${id}"]`)) {
       return;
     }
 
@@ -394,7 +394,7 @@ export class ZizaiRightPanel extends HTMLElement {
 
     this._workspaces.forEach(ws => {
       const pane = document.createElement('div');
-      pane.className = \`workspace-pane \${ws.id === this._activeId ? 'active' : ''}\`;
+      pane.className = `workspace-pane ${ws.id === this._activeId ? 'active' : ''}`;
       pane.dataset.id = ws.id;
 
       if (ws.content instanceof HTMLElement) {
@@ -402,7 +402,7 @@ export class ZizaiRightPanel extends HTMLElement {
       } else if (typeof ws.content === 'string') {
         pane.innerHTML = ws.content;
       } else {
-        pane.textContent = \`[模組內容: \${ws.label}]\`;
+        pane.textContent = `[模組內容: ${ws.label}]`;
       }
 
       this._contentContainer.appendChild(pane);
@@ -432,9 +432,9 @@ export class ZizaiRightPanel extends HTMLElement {
 
     activeFavs.forEach(ws => {
       const chip = document.createElement('button');
-      chip.className = \`favorite-chip \${ws.id === this._activeId ? 'active' : ''}\`;
+      chip.className = `favorite-chip ${ws.id === this._activeId ? 'active' : ''}`;
       chip.textContent = ws.label;
-      chip.title = \`切換至 \${ws.label}\`;
+      chip.title = `切換至 ${ws.label}`;
       chip.addEventListener('click', () => this.setActiveWorkspace(ws.id, 'user_action'));
       this._favContainer.appendChild(chip);
     });
