@@ -152,7 +152,7 @@ async function run(){
  // 09 使用者輸入以純文字呈現，不能建立 HTML 元素
  {
   var f=fixture(),r=refs(f.panel);window.__zizaiXss=false;
-  var scriptText='<script>window.__zizaiXss=true;<\\/script>';
+  var scriptText='<script>window.__zizaiXss=true;<'+ '/script>';
   var imageText='<img src=x onerror="window.__zizaiXss=true">';
   r.input.value=scriptText;enter(r.input);r.input.value=imageText;enter(r.input);
   await frame();
