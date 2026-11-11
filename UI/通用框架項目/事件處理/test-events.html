@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>ZIZAI 事件處理 V1 驗證</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 40px; background: #f9fafb; color: #111; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; margin-bottom: 16px; }
+    pre { background: #1f2937; color: #f3f4f6; padding: 12px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; }
+    .success { color: #059669; font-weight: bold; }
+    .error { color: #dc2626; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>ZIZAI 事件處理單元驗證 (Event V1)</h2>
+    <p>測試：Shadow DOM 穿透、自動冒泡、結構完整性、cleanup 機制。</p>
+    <div id="shadow-host"></div>
+  </div>
+  <div class="card">
+    <h3>驗證日誌</h3>
+    <pre id="log-output">等待執行驗證...\n</pre>
+  </div>
+
+  <script src="./zizai-events.js"></script>
+  <script>
+    const logOutput = document.getElementById('log-output');
+    function appendLog(msg, isSuccess) {
+      const cls = isSuccess ? 'success' : '';
+      logOutput.innerHTML += '<span class="' + cls + '">' + msg + '</span>\n';
+      console.log(msg);
+    }
+
+    const host = document.getElementById('shadow-host');
+    const shadowRoot = host.attachShadow({ mode: 'open' });
+    const innerBtn = document.createElement('button');
+    innerBtn.textContent = '點擊觸發 Shadow DOM 內部事件測試';
+    innerBtn.style.padding = '8px 16px';
+    shadowRoot.appendChild(innerBtn);
+
+    let receivedCount = 0;
+
+    const cleanup = ZizaiEvents.addEventListenerWithCleanup(
+      document,
+      'zizai-framework-test',
+      function(event) {
+        receivedCount++;
+        const detail = event.detail;
+        appendLog('[事件接收 #' + receivedCount + '] 成功穿透 Shadow DOM!');
+        appendLog('  - source: ' + detail.source);
+        appendLog('  - data: ' + JSON.stringify(detail.data));
+        appendLog('  - timestamp: ' + detail.timestamp);
+
+        if (detail.source === 'shadow-button-unit' && detail.data.value === 100) {
+          appendLog('🎉 驗證結果: 測試完全通過 (PASSED)', true);
+        } else {
+          appendLog('❌ 驗證結果: 資料內容不符', false);
+        }
+      }
+    );
+
+    innerBtn.addEventListener('click', function() {
+      appendLog('-> 觸發內部按鈕點擊，正在發送自定義事件...');
+      ZizaiEvents.dispatchCustomEvent(
+        innerBtn,
+        'zizai-framework-test',
+        { value: 100, message: 'Hello ZIZAI Event V1' },
+        'shadow-button-unit'
+      );
+    });
+
+    setTimeout(function() {
+      innerBtn.click();
+
+      setTimeout(function() {
+        appendLog('-> 測試執行 cleanup 解綁監聽器...');
+        cleanup();
+
+        ZizaiEvents.dispatchCustomEvent(
+          innerBtn,
+          'zizai-framework-test',
+          { value: 200, message: 'Should not be received' },
+          'shadow-button-unit'
+        );
+
+        if (receivedCount === 1) {
+          appendLog('🎉 驗證結果: Cleanup 解綁機制驗證通過 (PASSED)', true);
+        }
+      }, 100);
+    }, 200);
+  </script>
+</body>
+</html>
