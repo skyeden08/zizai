@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zizai-center-panel 測試</title>
+<style>
+body{font-family:system-ui,sans-serif;padding:16px}
+#results{margin-top:16px}
+.case{padding:4px 0;font-family:monospace}
+.pass{color:green}.fail{color:red}
+#summary{font-weight:bold;margin-top:12px}
+.fixture{height:300px;border:1px solid #ccc;margin:8px 0}
+</style>
+</head>
+<body>
+<h1>zizai-center-panel 測試</h1>
+<div id="fixtures"></div><div id="results"></div><div id="summary">執行中…</div>
+<script src="../../通用框架項目/事件處理/zizai-events.js"></script>
+<script src="./zizai-center-panel.js"></script>
+<script>
+(function(){
+'use strict';
+var results=document.getElementById('results');
+var summary=document.getElementById('summary');
+var fixtures=document.getElementById('fixtures');
+var total=0,failed=0;
+function assert(ok,message){if(!ok)throw new Error(message||'斷言失敗');}
+function record(name,fn){
+ total++;
+ var row=document.createElement('div');row.className='case';
+ try{fn();row.classList.add('pass');row.textContent='[PASS] '+name;}
+ catch(error){failed++;row.classList.add('fail');row.textContent='[FAIL] '+name+' — '+(error&&error.message||String(error));}
+ results.appendChild(row);
+}
+function fixture(){
+ var wrap=document.createElement('div');wrap.className='fixture';
+ var panel=document.createElement('zizai-center-panel');wrap.appendChild(panel);fixtures.appendChild(wrap);
+ return {wrap:wrap,panel:panel};
+}
+function refs(panel){
+ var root=panel.shadowRoot;
+ return {
+ select:root.querySelector('.toolbar__select'),
+ messages:root.querySelector('.messages'),
+ list:root.querySelector('.messages__list'),
+ composer:root.querySelector('.composer'),
+ input:root.querySelector('.composer__input'),
+ next:root.querySelector('.composer__next'),
+ send:root.querySelector('.composer__send')
+ };
+}
+function events(panel,name){
+ var list=[];panel.addEventListener(name,function(event){list.push(event);});return list;
+}
+function enter(input,options){
+ options=options||{};
+ var event=new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true,shiftKey:!!options.shiftKey});
+ if(options.keyCode!==undefined)Object.defineProperty(event,'keyCode',{value:options.keyCode,configurable:true});
+ if(options.isComposing!==undefined)Object.defineProperty(event,'isComposing',{value:options.isComposing,configurable:true});
+ input.dispatchEvent(event);return event;
+}
+function changeTopic(ref,topic){ref.select.value=topic;ref.select.dispatchEvent(new Event('change',{bubbles:true}));}
+function frame(){return new Promise(function(resolve){requestAnimationFrame(resolve);});}
+async function run(){
+ // 01 主題切換事件與相同主題不重複觸發
+ {
+  var f=fixture(),r=refs(f.panel),list=events(f.panel,'zizai-topic-change');
+  changeTopic(r,'architecture');
+  record('01 主題切換事件結構',function(){
+   assert(list.length===1,'應觸發一次');var e=list[0];
+   assert(e.bubbles&&e.composed,'事件應 bubbles/composed');
+   assert(e.detail.source==='zizai-center-panel','source 不符');
+   assert(e.detail.data.topic==='architecture','topic 不符');
+   assert(typeof e.detail.timestamp==='number','timestamp 不符');
+  });
+  changeTopic(r,'architecture');
+  record('01b 相同主題不觸發',function(){assert(list.length===1,'相同主題不應重複觸發');});
+  f.wrap.remove();
+ }
+ // 02 正常訊息送出
+ {
+  var f=fixture(),r=refs(f.panel),list=events(f.panel,'zizai-message-sent');
+  r.input.value='Hello ZIZAI';enter(r.input);
+  record('02 正常訊息發送',function(){
+   assert(list.length===1,'事件次數不符');assert(list[0].detail.data.text==='Hello ZIZAI','事件文字不符');
+   assert(list[0].detail.data.topic==='default','事件主題不符');assert(r.input.value==='','輸入框未清空');
+   assert(r.list.children.length===1&&r.list.firstChild.textContent==='Hello ZIZAI','氣泡不符');
+  });
+  f.wrap.remove();
+ }
+ // 03 空白訊息過濾
+ {
+  var f=fixture(),r=refs(f.panel),list=events(f.panel,'zizai-message-sent');
+  ['', '   ','\n','\t',' \n\t '].forEach(function(value){r.input.value=value;r.send.click();});
+  record('03 空白訊息過濾',function(){assert(list.length===0,'空白訊息不應發事件');assert(r.list.children.length===0,'空白訊息不應產生氣泡');});
+  f.wrap.remove();
+ }
+ // 04 Enter 送出、Shift+Enter 保留內容
+ {
+  var f=fixture(),r=refs(f.panel),list=events(f.panel,'zizai-message-sent');
+  r.input.value='shift-line';enter(r.input,{shiftKey:true});
+  record('04a Shift+Enter 不送出',function(){assert(list.length===0,'不應送出');assert(r.input.value==='shift-line','內容應保留');});
+  enter(r.input);
+  record('04b Enter 送出',function(){assert(list.length===1,'應送出一次');assert(r.input.value==='','送出後應清空');});
+  f.wrap.remove();
+ }
+ // 05 主題歷史隔離
+ {
+  var f=fixture(),r=refs(f.panel);
+  r.input.value='msg-default';enter(r.input);
+  changeTopic(r,'architecture');r.input.value='msg-arch';enter(r.input);
+  changeTopic(r,'trading');r.input.value='msg-trade';enter(r.input);
+  changeTopic(r,'default');var d=r.list.textContent;
+  changeTopic(r,'architecture');var a=r.list.textContent;
+  changeTopic(r,'trading');var t=r.list.textContent;
+  record('05 主題歷史隔離',function(){assert(d==='msg-default','default 歷史不符');assert(a==='msg-arch','architecture 歷史不符');assert(t==='msg-trade','trading 歷史不符');});
+  f.wrap.remove();
+ }
+ // 06 IME 組字期間不送出，組字後可送出
+ {
+  var f=fixture(),r=refs(f.panel),list=events(f.panel,'zizai-message-sent');
+  r.input.value='組字中';r.input.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));
+  enter(r.input,{isComposing:true});
+  record('06a IME 組字期間 Enter 不送出',function(){assert(list.length===0,'組字期間不應送出');assert(r.input.value==='組字中','內容應保留');});
+  r.input.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true}));enter(r.input);
+  record('06b 組字結束後 Enter 送出',function(){assert(list.length===1,'組字後應送出一次');assert(r.input.value==='','送出後應清空');});
+  f.wrap.remove();
+ }
+ // 07 Safari 順序模擬：compositionend 後 keyCode 229 仍阻止送出
+ {
+  var f=fixture(),r=refs(f.panel),list=events(f.panel,'zizai-message-sent');
+  var probe=new KeyboardEvent('keydown',{key:'Enter'});
+  Object.defineProperty(probe,'keyCode',{value:229,configurable:true});
+  record('07a 合成事件可設定 keyCode 229',function(){assert(probe.keyCode===229,'keyCode 應為 229');});
+  r.input.value='Safari-IME';
+  r.input.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));
+  r.input.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true}));
+  enter(r.input,{keyCode:229});
+  record('07b 合成 Safari 順序不送出',function(){assert(list.length===0,'keyCode 229 不應送出');assert(r.input.value==='Safari-IME','內容應保留');});
+  enter(r.input,{keyCode:13});
+  record('07c 一般 Enter 可送出',function(){assert(list.length===1,'一般 Enter 應送出一次');});
+  f.wrap.remove();
+ }
+ // 08 Next 事件
+ {
+  var f=fixture(),r=refs(f.panel),list=events(f.panel,'zizai-next-click');
+  changeTopic(r,'trading');r.next.click();
+  record('08 Next 事件結構',function(){assert(list.length===1,'Next 應觸發一次');assert(list[0].bubbles&&list[0].composed,'事件應 bubbles/composed');assert(list[0].detail.source==='zizai-center-panel','source 不符');assert(list[0].detail.data.topic==='trading','topic 不符');});
+  f.wrap.remove();
+ }
+ // 09 使用者輸入以純文字呈現，不能建立 HTML 元素
+ {
+  var f=fixture(),r=refs(f.panel);window.__zizaiXss=false;
+  var scriptText='<script>window.__zizaiXss=true;<\\/script>';
+  var imageText='<img src=x onerror="window.__zizaiXss=true">';
+  r.input.value=scriptText;enter(r.input);r.input.value=imageText;enter(r.input);
+  await frame();
+  record('09 XSS 純文字顯示',function(){
+   assert(r.list.children.length===2,'氣泡數應為 2');
+   assert(r.list.children[0].textContent===scriptText,'script 文字不符');
+   assert(r.list.children[1].textContent===imageText,'img 文字不符');
+   assert(!r.list.querySelector('script')&&!r.list.querySelector('img'),'不應建立 HTML 元素');
+   assert(window.__zizaiXss===false,'不應執行輸入內容');
+  });
+  f.wrap.remove();
+ }
+ // 10 卸載期間監聽器清理
+ {
+  var f=fixture(),p=f.panel,r=refs(p);
+  var sent=events(p,'zizai-message-sent'),next=events(p,'zizai-next-click'),topic=events(p,'zizai-topic-change');
+  f.wrap.removeChild(p);r.input.value='detached';enter(r.input);r.next.click();changeTopic(r,'architecture');
+  record('10 卸載期間事件清理',function(){assert(sent.length===0&&next.length===0&&topic.length===0,'卸載期間不應觸發對外事件');});
+ }
+ // 11 同一實例重插：原主題、歷史保留，事件不重複綁定
+ {
+  var f=fixture(),p=f.panel,r=refs(p);
+  var sent=events(p,'zizai-message-sent'),next=events(p,'zizai-next-click'),topic=events(p,'zizai-topic-change');
+  changeTopic(r,'trading');r.input.value='kept';enter(r.input);
+  f.wrap.removeChild(p);await frame();f.wrap.appendChild(p);await frame();
+  sent.length=0;next.length=0;topic.length=0;
+  var r2=refs(p),savedTopic=r2.select.value,savedHistory=Array.prototype.map.call(r2.list.children,function(n){return n.textContent;});
+  r2.input.value='after-reinsert';enter(r2.input);r2.next.click();
+  var bubbleCount=r2.list.children.length;
+  changeTopic(r2,'architecture');
+  record('11 重新插入保留狀態且不重複綁定',function(){
+   assert(savedTopic==='trading','原主題未保留：'+savedTopic);
+   assert(savedHistory.length===1&&savedHistory[0]==='kept','原訊息未保留：'+JSON.stringify(savedHistory));
+   assert(bubbleCount===2,'原氣泡應保留並新增一則，實際 '+bubbleCount);
+   assert(sent.length===1&&next.length===1&&topic.length===1,'三種事件應各觸發一次');
+  });
+  f.wrap.remove();
+ }
+ // 12 版面與捲動：輸入框、Next、送出完整位於元件範圍
+ async function layoutCase(display,label){
+  var f=fixture(),p=f.panel,r=refs(p);p.style.display=display;await frame();
+  for(var i=0;i<30;i++){r.input.value='line-'+i;enter(r.input);}
+  await frame();
+  record(label,function(){
+   var m=r.messages,host=p.getBoundingClientRect(),input=r.input.getBoundingClientRect();
+   var composer=r.composer.getBoundingClientRect(),next=r.next.getBoundingClientRect(),send=r.send.getBoundingClientRect();
+   assert(m.scrollHeight>m.clientHeight,'訊息區應可捲動');
+   assert(input.top>=host.top-.5&&input.bottom<=host.bottom+.5,'輸入框應完整位於元件內');
+   assert(composer.bottom<=host.bottom+.5,'輸入操作區下緣應位於元件內');
+   [next,send].forEach(function(rect){assert(rect.width>0&&rect.height>0&&rect.top>=host.top-.5&&rect.bottom<=host.bottom+.5&&rect.left>=host.left-.5&&rect.right<=host.right+.5,'Next／送出按鈕應完整可見於元件內');});
+   assert(m.scrollHeight-m.clientHeight-m.scrollTop<=1,'訊息區應捲到底端');
+  });
+  f.wrap.remove();
+ }
+ await layoutCase('block','12a 版面與捲動 display:block');
+ await layoutCase('flex','12b 版面與捲動 display:flex');
+ summary.textContent=failed===0?'總結果：PASS（'+total+' 項）':'總結果：FAIL（'+failed+' / '+total+' 項失敗）';
+ summary.className=failed===0?'pass':'fail';
+}
+run().catch(function(error){summary.textContent='總結果：FAIL — 測試框架錯誤：'+(error&&error.message||String(error));summary.className='fail';});
+})();
+</script>
+</body>
+</html>
