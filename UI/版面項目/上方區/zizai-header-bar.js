@@ -34,10 +34,10 @@
             display: block;
             width: 100%;
             height: 60px;
-            background-color: var(--zizai-color-surface, #ffffff);
-            border-bottom: 1px solid var(--zizai-color-border, #e5e7eb);
+            background-color: var(--zizai-color-surface);
+            border-bottom: 1px solid var(--zizai-color-border);
             box-sizing: border-box;
-            font-family: var(--zizai-font-family, system-ui, -apple-system, sans-serif);
+            font-family: var(--zizai-font-family);
             user-select: none;
           }
 
@@ -59,34 +59,34 @@
           .brand-logo {
             font-weight: 700;
             font-size: 1.25rem;
-            color: var(--zizai-color-text, #111827);
+            color: var(--zizai-color-text);
             letter-spacing: -0.025em;
           }
 
           .brand-tag {
             font-size: 0.75rem;
-            background-color: #f3f4f6;
-            color: #4b5563;
+            background-color: var(--zizai-color-surface);
+            color: var(--zizai-color-text-muted);
             padding: 2px 8px;
             border-radius: 9999px;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--zizai-color-border);
           }
 
           .banner-slot {
             flex: 0 1 400px;
             height: 36px;
-            background-color: #f9fafb;
-            border: 1px dashed #d1d5db;
+            background-color: var(--zizai-color-surface);
+            border: 1px dashed var(--zizai-color-border);
             border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #9ca3af;
+            color: var(--zizai-color-text-muted);
             font-size: 0.8125rem;
           }
 
           .banner-slot:hover {
-            background-color: #f3f4f6;
+            background-color: var(--zizai-color-surface);
           }
         </style>
 

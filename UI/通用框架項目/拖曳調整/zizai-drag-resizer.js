@@ -19,7 +19,7 @@ TEMPLATE.innerHTML = `
       cursor: col-resize;
       width: var(--zizai-resizer-width, 8px);
       height: var(--zizai-resizer-height, 100%);
-      background-color: var(--zizai-resizer-bg, transparent);
+      background-color: var(--zizai-color-background);
       transition: background-color var(--zizai-transition-fast, 0.15s ease);
       outline: none;
     }
@@ -48,7 +48,7 @@ TEMPLATE.innerHTML = `
       width: var(--zizai-resizer-bar-thickness, 2px);
       height: var(--zizai-resizer-bar-length, 24px);
       border-radius: var(--zizai-radius-sm, 2px);
-      background-color: var(--zizai-border-color, #cbd5e1);
+      background-color: var(--zizai-color-border);
       transition: background-color var(--zizai-transition-fast, 0.15s ease),
                   transform var(--zizai-transition-fast, 0.15s ease);
     }
@@ -60,11 +60,11 @@ TEMPLATE.innerHTML = `
 
     :host(:hover:not([disabled])) .handle-bar,
     :host(:focus-visible:not([disabled])) .handle-bar {
-      background-color: var(--zizai-accent-color, #3b82f6);
+      background-color: var(--zizai-color-primary);
     }
 
     :host([data-dragging="true"]) .handle-bar {
-      background-color: var(--zizai-accent-active-color, #2563eb);
+      background-color: var(--zizai-color-primary);
       transform: scaleY(1.2);
     }
 
@@ -73,7 +73,7 @@ TEMPLATE.innerHTML = `
     }
 
     :host(:focus-visible) {
-      box-shadow: inset 0 0 0 2px var(--zizai-focus-ring-color, rgba(59, 130, 246, 0.5));
+      box-shadow: inset 0 0 0 2px var(--zizai-color-primary);
     }
   </style>
   <div class="handle-track" part="track">
@@ -456,4 +456,3 @@ export class ZizaiDragResizer extends HTMLElement {
 if (!customElements.get('zizai-drag-resizer')) {
   customElements.define('zizai-drag-resizer', ZizaiDragResizer);
 }
-

@@ -13,9 +13,9 @@ template.innerHTML = `
       height: 100%;
       width: 100%;
       box-sizing: border-box;
-      background: var(--zizai-bg-secondary, #f8f9fa);
-      border-left: 1px solid var(--zizai-border-color, #e0e0e0);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--zizai-color-surface);
+      border-left: 1px solid var(--zizai-color-border);
+      font-family: var(--zizai-font-family);
       overflow: hidden;
       position: relative;
     }
@@ -24,8 +24,8 @@ template.innerHTML = `
 
     .right-header {
       padding: 12px;
-      border-bottom: 1px solid var(--zizai-border-color, #e0e0e0);
-      background-color: var(--zizai-bg-primary, #ffffff);
+      border-bottom: 1px solid var(--zizai-color-border);
+      background-color: var(--zizai-color-background);
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -39,9 +39,9 @@ template.innerHTML = `
       padding: 8px 12px;
       font-size: 14px;
       font-weight: 500;
-      color: var(--zizai-text-primary, #333333);
-      background-color: var(--zizai-input-bg, #ffffff);
-      border: 1px solid var(--zizai-border-color, #cccccc);
+      color: var(--zizai-color-text);
+      background-color: var(--zizai-color-background);
+      border: 1px solid var(--zizai-color-border);
       border-radius: 6px;
       outline: none;
       cursor: pointer;
@@ -49,14 +49,14 @@ template.innerHTML = `
     }
 
     select.workspace-selector:disabled {
-      background-color: var(--zizai-input-disabled-bg, #f1f5f9);
-      color: var(--zizai-text-tertiary, #9ca3af);
+      background-color: var(--zizai-color-surface);
+      color: var(--zizai-color-text-muted);
       cursor: not-allowed;
     }
 
     select.workspace-selector:focus {
-      border-color: var(--zizai-focus-color, #2563eb);
-      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+      border-color: var(--zizai-color-primary);
+      box-shadow: 0 0 0 2px var(--zizai-color-primary);
     }
 
     .favorites-toolbar {
@@ -70,7 +70,7 @@ template.innerHTML = `
     .favorites-label {
       font-size: 12px;
       font-weight: 600;
-      color: var(--zizai-text-secondary, #666666);
+      color: var(--zizai-color-text-muted);
       margin-right: 4px;
       user-select: none;
     }
@@ -91,9 +91,9 @@ template.innerHTML = `
       padding: 4px 8px;
       font-size: 12px;
       border-radius: 4px;
-      border: 1px solid var(--zizai-border-color, #d1d5db);
-      background-color: var(--zizai-chip-bg, #f3f4f6);
-      color: var(--zizai-text-primary, #1f2937);
+      border: 1px solid var(--zizai-color-border);
+      background-color: var(--zizai-color-surface);
+      color: var(--zizai-color-text);
       cursor: pointer;
       user-select: none;
       transition: background-color 0.15s ease, border-color 0.15s ease;
@@ -101,39 +101,39 @@ template.innerHTML = `
     }
 
     .favorite-chip:hover {
-      background-color: var(--zizai-chip-hover-bg, #e5e7eb);
-      border-color: var(--zizai-chip-hover-border, #9ca3af);
+      background-color: var(--zizai-color-surface);
+      border-color: var(--zizai-color-border);
     }
 
     .favorite-chip.active {
-      background-color: var(--zizai-primary-light, #eff6ff);
-      border-color: var(--zizai-primary, #2563eb);
-      color: var(--zizai-primary, #2563eb);
+      background-color: var(--zizai-color-primary);
+      border-color: var(--zizai-color-primary);
+      color: var(--zizai-color-background);
       font-weight: 600;
     }
 
     .edit-fav-btn {
       padding: 2px 6px;
       font-size: 11px;
-      border: 1px dashed var(--zizai-border-color, #9ca3af);
+      border: 1px dashed var(--zizai-color-border);
       border-radius: 4px;
       background: transparent;
-      color: var(--zizai-text-secondary, #666666);
+      color: var(--zizai-color-text-muted);
       cursor: pointer;
       margin-left: auto;
       white-space: nowrap;
     }
 
     .edit-fav-btn:hover {
-      border-color: var(--zizai-primary, #2563eb);
-      color: var(--zizai-primary, #2563eb);
+      border-color: var(--zizai-color-primary);
+      color: var(--zizai-color-primary);
     }
 
     .workspace-content {
       flex: 1;
       position: relative;
       overflow: hidden;
-      background-color: var(--zizai-content-bg, #ffffff);
+      background-color: var(--zizai-color-background);
     }
 
     .workspace-pane {
@@ -156,7 +156,7 @@ template.innerHTML = `
       align-items: center;
       justify-content: center;
       height: 100%;
-      color: var(--zizai-text-tertiary, #9ca3af);
+      color: var(--zizai-color-text-muted);
       font-size: 14px;
       text-align: center;
       padding: 20px;
@@ -424,7 +424,7 @@ export class ZizaiRightPanel extends HTMLElement {
     if (activeFavs.length === 0) {
       const placeholder = document.createElement('span');
       placeholder.style.fontSize = '12px';
-      placeholder.style.color = '#9ca3af';
+      placeholder.style.color = 'var(--zizai-color-text-muted)';
       placeholder.textContent = '（無常用工具）';
       this._favContainer.appendChild(placeholder);
       return;
