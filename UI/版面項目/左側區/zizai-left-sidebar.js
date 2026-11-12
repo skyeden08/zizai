@@ -45,6 +45,7 @@
      */
     toggleSidebar() {
       this.isCollapsed = !this.isCollapsed;
+      this.classList.toggle('collapsed', this.isCollapsed);
 
       var container = this.shadowRoot.getElementById('sidebar-container');
       if (container) {
@@ -73,7 +74,8 @@
 
       this.shadowRoot.innerHTML =
         '<style>' +
-        ':host { display: block; width: 280px; height: 100%; box-sizing: border-box; font-family: var(--zizai-font-family, system-ui, -apple-system, sans-serif); user-select: none; }' +
+        ':host { display: block; width: 280px; height: 100%; box-sizing: border-box; font-family: var(--zizai-font-family, system-ui, -apple-system, sans-serif); user-select: none; transition: width 0.3s ease; }' +
+        ':host(.collapsed) { width: 60px; }' +
         '.sidebar-container { width: 100%; height: 100%; background-color: #fdfdfd; border-right: 1px solid var(--zizai-color-border, #e5e7eb); display: flex; flex-direction: column; transition: width 0.3s ease; overflow: hidden; box-sizing: border-box; }' +
         '.sidebar-container.collapsed { width: 60px; }' +
         '.sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #e5e7eb; background-color: #f9fafb; min-height: 57px; box-sizing: border-box; }' +
