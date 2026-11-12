@@ -177,9 +177,7 @@
   </header>
 
   <main class="workspace-content" id="content-container">
-    <div id="empty-view" class="empty-state">
-      <p>目前尚無可用項目或未選擇檢視內容</p>
-    </div>
+    <div id="empty-view" class="empty-state"></div>
   </main>
 `;
 
@@ -368,7 +366,7 @@
       if (this._workspaces.length === 0) {
         const opt = document.createElement('option');
         opt.value = '';
-        opt.textContent = '-- 無可用項目 --';
+        opt.textContent = '';
         this._selectEl.appendChild(opt);
         this._selectEl.disabled = true;
         return;
@@ -390,7 +388,7 @@
 
       if (this._workspaces.length === 0) {
         this._emptyView.style.display = 'flex';
-        this._emptyView.textContent = '目前無可用共視項目';
+        this._emptyView.textContent = '';
         return;
       }
 
@@ -406,7 +404,7 @@
         } else if (typeof ws.content === 'string') {
           pane.textContent = ws.content;
         } else {
-          pane.textContent = `[模組內容: ${ws.label}]`;
+          pane.textContent = '';
         }
 
         this._contentContainer.appendChild(pane);
@@ -424,15 +422,6 @@
     _renderFavorites() {
       this._favContainer.innerHTML = '';
       const activeFavs = this._workspaces.filter(ws => this._favorites.includes(ws.id));
-
-      if (activeFavs.length === 0) {
-        const placeholder = document.createElement('span');
-        placeholder.style.fontSize = '12px';
-        placeholder.style.color = 'var(--zizai-color-text-muted)';
-        placeholder.textContent = '（無常用工具）';
-        this._favContainer.appendChild(placeholder);
-        return;
-      }
 
       activeFavs.forEach(ws => {
         const chip = document.createElement('button');
