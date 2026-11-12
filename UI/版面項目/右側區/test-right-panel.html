@@ -62,29 +62,104 @@
 
     function runTests() {
       const results = [];
+      const runCase = (name, test) => {
+        try {
+          const detail = test();
+          results.push(`${detail === false ? 'FAIL' : 'PASS'}: ${name}`);
+        } catch (error) {
+          results.push(`FAIL: ${name} — ${error && error.message ? error.message : String(error)}`);
+        }
+      };
       const assert = (condition, name) => {
-        results.push(`${condition ? 'PASS' : 'FAIL'}: ${name}`);
+        if (!condition) throw new Error(name);
       };
 
-      panel.setWorkspaces(mockData);
-      panel.setFavorites(['test-a']);
-      assert(panel.getActiveWorkspace() === 'test-a', 'initial active workspace');
-      assert(panel.getAttribute('active-id') === 'test-a', 'initial active-id synchronization');
+      runCase('custom element registered and shadow root rendered', () => {
+        assert(customElements.get('zizai-right-panel') !== undefined, 'custom element not registered');
+        assert(panel.shadowRoot !== null, 'shadow root missing');
+        assert(panel.shadowRoot.querySelector('#workspace-select') !== null, 'workspace select missing');
+      });
 
-      const select = panel.shadowRoot.querySelector('#workspace-select');
-      select.value = 'test-b';
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-      assert(panel.getActiveWorkspace() === 'test-b', 'workspace selection');
-      assert(panel.getAttribute('active-id') === 'test-b', 'selection updates active-id');
+      runCase('setWorkspaces initializes active workspace and active-id', () => {
+        panel.setWorkspaces(mockData);
+        assert(panel.getActiveWorkspace() === 'test-a', 'initial active workspace mismatch');
+        assert(panel.getAttribute('active-id') === 'test-a', 'initial active-id mismatch');
+        assert(panel.shadowRoot.querySelectorAll('.workspace-pane').length === 3, 'workspace pane count mismatch');
+      });
 
-      const favorite = panel.shadowRoot.querySelector('.favorite-chip');
-      favorite.click();
-      assert(panel.getActiveWorkspace() === 'test-a', 'favorite selection');
+      runCase('select changes workspace and synchronizes active-id', () => {
+        const select = panel.shadowRoot.querySelector('#workspace-select');
+        select.value = 'test-b';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        assert(panel.getActiveWorkspace() === 'test-b', 'workspace selection did not update active workspace');
+        assert(panel.getAttribute('active-id') === 'test-b', 'selection did not update active-id');
+      });
 
-      panel.setAttribute('active-id', 'test-c');
-      assert(panel.getActiveWorkspace() === 'test-c', 'external active-id synchronization');
-      assert(select.value === 'test-c', 'active-id synchronizes select');
-      assert(panel.getFavorites()[0] === 'test-a', 'favorites state');
+      runCase('setFavorites displays and selects favorite workspace', () => {
+        panel.setFavorites(['test-a']);
+        const favorite = panel.shadowRoot.querySelector('.favorite-chip');
+        assert(favorite !== null, 'favorite chip missing');
+        favorite.click();
+        assert(panel.getActiveWorkspace() === 'test-a', 'favorite click did not select its workspace');
+      });
+
+      runCase('external active-id updates internal state and select', () => {
+        panel.setAttribute('active-id', 'test-c');
+        const select = panel.shadowRoot.querySelector('#workspace-select');
+        assert(panel.getActiveWorkspace() === 'test-c', 'internal active workspace not synchronized');
+        assert(select.value === 'test-c', 'select not synchronized');
+      });
+
+      runCase('workspace-changed event is dispatched with activeId and previousId', () => {
+        const events = [];
+        const listener = event => events.push(event);
+        panel.addEventListener('zizai-workspace-changed', listener);
+        try {
+          panel.setActiveWorkspace('test-b', 'programmatic');
+        } finally {
+          panel.removeEventListener('zizai-workspace-changed', listener);
+        }
+        assert(events.length === 1, `expected one event, got ${events.length}`);
+        assert(events[0].detail.data.activeId === 'test-b', 'event activeId mismatch');
+        assert(events[0].detail.data.previousId === 'test-c', 'event previousId mismatch');
+      });
+
+      runCase('setWorkspaces([]) clears active-id, select, and workspace content', () => {
+        panel.setWorkspaces([]);
+        const select = panel.shadowRoot.querySelector('#workspace-select');
+        const emptyView = panel.shadowRoot.querySelector('#empty-view');
+        assert(panel.getActiveWorkspace() === null, 'active workspace was not cleared');
+        assert(!panel.hasAttribute('active-id'), 'active-id was not removed');
+        assert(select.disabled, 'select should be disabled for empty workspace list');
+        assert(select.value === '', 'select value should be empty');
+        assert(panel.shadowRoot.querySelectorAll('.workspace-pane').length === 0, 'workspace panes remain');
+        assert(emptyView.style.display === 'flex', 'empty state should be displayed');
+        assert(emptyView.textContent === '', 'empty state should contain no explanatory text');
+      });
+
+      runCase('setFavorites([]) clears favorite chips without throwing', () => {
+        panel.setWorkspaces(mockData);
+        panel.setFavorites(['test-a']);
+        panel.setFavorites([]);
+        assert(panel.getFavorites().length === 0, 'favorites state was not cleared');
+        assert(panel.shadowRoot.querySelectorAll('.favorite-chip').length === 0, 'favorite chips remain');
+      });
+
+      runCase('null workspace content renders blank without throwing', () => {
+        panel.setWorkspaces([{ id: 'empty-content', label: '', content: null }]);
+        const pane = panel.shadowRoot.querySelector('.workspace-pane');
+        assert(pane !== null, 'workspace pane missing');
+        assert(pane.dataset.id === 'empty-content', 'workspace pane ID mismatch');
+        assert(pane.textContent === '', 'null content should render blank');
+        assert(pane.childNodes.length === 0, 'null content should not create child nodes');
+      });
+
+      runCase('empty favorites and empty content are independent of workspace state', () => {
+        panel.setFavorites([]);
+        assert(panel.getActiveWorkspace() === 'empty-content', 'active workspace changed unexpectedly');
+        assert(panel.getFavorites().length === 0, 'favorites should remain empty');
+        assert(panel.shadowRoot.querySelectorAll('.favorite-chip').length === 0, 'unexpected favorite chip');
+      });
 
       report.textContent = results.join('\n');
     }
