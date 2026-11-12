@@ -288,8 +288,10 @@
       if (!targetExists) return;
 
       const previousId = this._activeId;
+      const existingPanes = this._contentContainer.querySelectorAll('.workspace-pane');
+      const hasExistingPane = Array.from(existingPanes).some(pane => pane.dataset.id === id);
 
-      if (previousId === id && this._contentContainer.querySelector(`.workspace-pane[data-id="${id}"]`)) {
+      if (previousId === id && hasExistingPane) {
         return;
       }
 
@@ -402,7 +404,7 @@
         if (ws.content instanceof HTMLElement) {
           pane.appendChild(ws.content);
         } else if (typeof ws.content === 'string') {
-          pane.innerHTML = ws.content;
+          pane.textContent = ws.content;
         } else {
           pane.textContent = `[模組內容: ${ws.label}]`;
         }
