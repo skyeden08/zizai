@@ -3,9 +3,11 @@
  * Standard: Native Web Components (Custom Elements v1, Shadow DOM v1)
  * Integration: Compatible with ZizaiEvents shared event framework & fallback (with cancelable: true).
  */
+(function () {
+  'use strict';
 
-const template = document.createElement('template');
-template.innerHTML = `
+  const template = document.createElement('template');
+  template.innerHTML = `
   <style>
     :host {
       display: flex;
@@ -181,58 +183,99 @@ template.innerHTML = `
   </main>
 `;
 
-export class ZizaiRightPanel extends HTMLElement {
-  static get observedAttributes() { return ['active-id']; }
+  class ZizaiRightPanel extends HTMLElement {
+    static get observedAttributes() { return ['active-id']; }
 
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-    this.shadowRoot.appendChild(template.content.cloneNode(true));
+    constructor() {
+      super();
+      this.attachShadow({ mode: 'open' });
+      this.shadowRoot.appendChild(template.content.cloneNode(true));
 
-    this._workspaces = [];
-    this._favorites = [];
-    this._activeId = null;
-    this._isInternalSync = false;
+      this._workspaces = [];
+      this._favorites = [];
+      this._activeId = null;
+      this._isInternalSync = false;
 
-    this._selectEl = this.shadowRoot.querySelector('#workspace-select');
-    this._favContainer = this.shadowRoot.querySelector('#favorites-list');
-    this._btnEditFav = this.shadowRoot.querySelector('#btn-edit-favorites');
-    this._contentContainer = this.shadowRoot.querySelector('#content-container');
-    this._emptyView = this.shadowRoot.querySelector('#empty-view');
+      this._selectEl = this.shadowRoot.querySelector('#workspace-select');
+      this._favContainer = this.shadowRoot.querySelector('#favorites-list');
+      this._btnEditFav = this.shadowRoot.querySelector('#btn-edit-favorites');
+      this._contentContainer = this.shadowRoot.querySelector('#content-container');
+      this._emptyView = this.shadowRoot.querySelector('#empty-view');
 
-    this._onSelectChange = this._onSelectChange.bind(this);
-    this._onEditFavorites = this._onEditFavorites.bind(this);
-  }
+      this._onSelectChange = this._onSelectChange.bind(this);
+      this._onEditFavorites = this._onEditFavorites.bind(this);
+    }
 
-  connectedCallback() {
-    this._selectEl.addEventListener('change', this._onSelectChange);
-    this._btnEditFav.addEventListener('click', this._onEditFavorites);
-    this._renderAll();
-  }
+    connectedCallback() {
+      this._selectEl.addEventListener('change', this._onSelectChange);
+      this._btnEditFav.addEventListener('click', this._onEditFavorites);
+      this._renderAll();
+    }
 
-  disconnectedCallback() {
-    this._selectEl.removeEventListener('change', this._onSelectChange);
-    this._btnEditFav.removeEventListener('click', this._onEditFavorites);
-  }
+    disconnectedCallback() {
+      this._selectEl.removeEventListener('change', this._onSelectChange);
+      this._btnEditFav.removeEventListener('click', this._onEditFavorites);
+    }
 
-  attributeChangedCallback(name, oldValue, newValue) {
-    if (name === 'active-id' && oldValue !== newValue && !this._isInternalSync) {
-      if (newValue === null || newValue === undefined || newValue === '') {
-        const fallbackId = this._workspaces.length > 0 ? this._workspaces[0].id : null;
-        if (fallbackId) {
-          const previousId = this._activeId;
-          this._activeId = fallbackId;
-          this._syncAttributeAndSelect(fallbackId);
-          this._updatePanesActiveState();
-          this._renderFavorites();
+    attributeChangedCallback(name, oldValue, newValue) {
+      if (name === 'active-id' && oldValue !== newValue && !this._isInternalSync) {
+        if (newValue === null || newValue === undefined || newValue === '') {
+          const fallbackId = this._workspaces.length > 0 ? this._workspaces[0].id : null;
+          if (fallbackId) {
+            const previousId = this._activeId;
+            this._activeId = fallbackId;
+            this._syncAttributeAndSelect(fallbackId);
+            this._updatePanesActiveState();
+            this._renderFavorites();
 
-          if (previousId !== fallbackId) {
-            this._dispatchZizaiEvent('zizai-workspace-changed', {
-              activeId: this._activeId,
-              previousId: previousId
-            }, 'attribute_sync');
+            if (previousId !== fallbackId) {
+              this._dispatchZizaiEvent('zizai-workspace-changed', {
+                activeId: this._activeId,
+                previousId: previousId
+              }, 'attribute_sync');
+            }
+          } else {
+            this._activeId = null;
+            this._syncAttributeAndSelect(null);
+            this._updatePanesActiveState();
+            this._renderFavorites();
           }
+          return;
+        }
+
+        const exists = this._workspaces.some(w => w.id === newValue);
+        if (exists) {
+          this.setActiveWorkspace(newValue, 'attribute_sync');
         } else {
+          this._syncAttributeAndSelect(this._activeId);
+        }
+      }
+    }
+
+    setWorkspaces(items = []) {
+      this._workspaces = Array.isArray(items) ? [...items] : [];
+
+      const exists = this._workspaces.some(w => w.id === this._activeId);
+      if (!exists) {
+        this._activeId = this._workspaces.length > 0 ? this._workspaces[0].id : null;
+      }
+
+      this._renderAll();
+      this._syncAttributeAndSelect(this._activeId);
+    }
+
+    getWorkspaces() { return this._workspaces.map(w => ({ ...w })); }
+
+    setFavorites(favIds = []) {
+      this._favorites = Array.isArray(favIds) ? [...favIds] : [];
+      this._renderFavorites();
+    }
+
+    getFavorites() { return [...this._favorites]; }
+
+    setActiveWorkspace(id, source = 'programmatic') {
+      if (!id) {
+        if (this._workspaces.length === 0) {
           this._activeId = null;
           this._syncAttributeAndSelect(null);
           this._updatePanesActiveState();
@@ -241,206 +284,166 @@ export class ZizaiRightPanel extends HTMLElement {
         return;
       }
 
-      const exists = this._workspaces.some(w => w.id === newValue);
-      if (exists) {
-        this.setActiveWorkspace(newValue, 'attribute_sync');
-      } else {
-        this._syncAttributeAndSelect(this._activeId);
+      const targetExists = this._workspaces.some(w => w.id === id);
+      if (!targetExists) return;
+
+      const previousId = this._activeId;
+
+      if (previousId === id && this._contentContainer.querySelector(`.workspace-pane[data-id="${id}"]`)) {
+        return;
+      }
+
+      this._activeId = id;
+      this._syncAttributeAndSelect(id);
+      this._updatePanesActiveState();
+      this._renderFavorites();
+
+      this._dispatchZizaiEvent('zizai-workspace-changed', {
+        activeId: this._activeId,
+        previousId: previousId
+      }, source);
+    }
+
+    getActiveWorkspace() { return this._activeId; }
+
+    _syncAttributeAndSelect(id) {
+      this._isInternalSync = true;
+      try {
+        const validId = id || '';
+        if (this.getAttribute('active-id') !== validId) {
+          if (validId) this.setAttribute('active-id', validId);
+          else this.removeAttribute('active-id');
+        }
+        if (this._selectEl.value !== validId) this._selectEl.value = validId;
+      } finally {
+        this._isInternalSync = false;
       }
     }
-  }
 
-  setWorkspaces(items = []) {
-    this._workspaces = Array.isArray(items) ? [...items] : [];
-
-    const exists = this._workspaces.some(w => w.id === this._activeId);
-    if (!exists) {
-      this._activeId = this._workspaces.length > 0 ? this._workspaces[0].id : null;
+    _onSelectChange(e) {
+      const selectedId = e.target.value;
+      if (selectedId) this.setActiveWorkspace(selectedId, 'user_action');
     }
 
-    this._renderAll();
-    this._syncAttributeAndSelect(this._activeId);
-  }
+    _onEditFavorites() {
+      const availableClean = this._workspaces.map(w => ({ id: w.id, label: w.label }));
+      this._dispatchZizaiEvent('zizai-favorites-edit-requested', {
+        currentFavorites: [...this._favorites],
+        availableWorkspaces: availableClean
+      }, 'user_action');
+    }
 
-  getWorkspaces() { return this._workspaces.map(w => ({ ...w })); }
+    _dispatchZizaiEvent(eventName, data, source) {
+      if (window.ZizaiEvents && typeof window.ZizaiEvents.dispatchCustomEvent === 'function') {
+        window.ZizaiEvents.dispatchCustomEvent(this, eventName, data, source, {
+          bubbles: true,
+          composed: true,
+          cancelable: true
+        });
+      } else {
+        const eventDetail = {
+          source: source || 'programmatic',
+          data: data || {},
+          timestamp: Date.now()
+        };
+        this.dispatchEvent(new CustomEvent(eventName, {
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+          detail: eventDetail
+        }));
+      }
+    }
 
-  setFavorites(favIds = []) {
-    this._favorites = Array.isArray(favIds) ? [...favIds] : [];
-    this._renderFavorites();
-  }
+    _renderAll() {
+      this._renderSelectOptions();
+      this._renderWorkspacesContent();
+      this._renderFavorites();
+    }
 
-  getFavorites() { return [...this._favorites]; }
-
-  setActiveWorkspace(id, source = 'programmatic') {
-    if (!id) {
+    _renderSelectOptions() {
+      this._selectEl.innerHTML = '';
       if (this._workspaces.length === 0) {
-        this._activeId = null;
-        this._syncAttributeAndSelect(null);
-        this._updatePanesActiveState();
-        this._renderFavorites();
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '-- 無可用項目 --';
+        this._selectEl.appendChild(opt);
+        this._selectEl.disabled = true;
+        return;
       }
-      return;
-    }
 
-    const targetExists = this._workspaces.some(w => w.id === id);
-    if (!targetExists) return;
-
-    const previousId = this._activeId;
-
-    if (previousId === id && this._contentContainer.querySelector(`.workspace-pane[data-id="${id}"]`)) {
-      return;
-    }
-
-    this._activeId = id;
-    this._syncAttributeAndSelect(id);
-    this._updatePanesActiveState();
-    this._renderFavorites();
-
-    this._dispatchZizaiEvent('zizai-workspace-changed', {
-      activeId: this._activeId,
-      previousId: previousId
-    }, source);
-  }
-
-  getActiveWorkspace() { return this._activeId; }
-
-  _syncAttributeAndSelect(id) {
-    this._isInternalSync = true;
-    try {
-      const validId = id || '';
-      if (this.getAttribute('active-id') !== validId) {
-        if (validId) this.setAttribute('active-id', validId);
-        else this.removeAttribute('active-id');
-      }
-      if (this._selectEl.value !== validId) this._selectEl.value = validId;
-    } finally {
-      this._isInternalSync = false;
-    }
-  }
-
-  _onSelectChange(e) {
-    const selectedId = e.target.value;
-    if (selectedId) this.setActiveWorkspace(selectedId, 'user_action');
-  }
-
-  _onEditFavorites() {
-    const availableClean = this._workspaces.map(w => ({ id: w.id, label: w.label }));
-    this._dispatchZizaiEvent('zizai-favorites-edit-requested', {
-      currentFavorites: [...this._favorites],
-      availableWorkspaces: availableClean
-    }, 'user_action');
-  }
-
-  _dispatchZizaiEvent(eventName, data, source) {
-    if (window.ZizaiEvents && typeof window.ZizaiEvents.dispatchCustomEvent === 'function') {
-      window.ZizaiEvents.dispatchCustomEvent(this, eventName, data, source, {
-        bubbles: true,
-        composed: true,
-        cancelable: true
+      this._selectEl.disabled = false;
+      this._workspaces.forEach(ws => {
+        const opt = document.createElement('option');
+        opt.value = ws.id;
+        opt.textContent = ws.label;
+        if (ws.id === this._activeId) opt.selected = true;
+        this._selectEl.appendChild(opt);
       });
-    } else {
-      const eventDetail = {
-        source: source || 'programmatic',
-        data: data || {},
-        timestamp: Date.now()
-      };
-      this.dispatchEvent(new CustomEvent(eventName, {
-        bubbles: true,
-        composed: true,
-        cancelable: true,
-        detail: eventDetail
-      }));
-    }
-  }
-
-  _renderAll() {
-    this._renderSelectOptions();
-    this._renderWorkspacesContent();
-    this._renderFavorites();
-  }
-
-  _renderSelectOptions() {
-    this._selectEl.innerHTML = '';
-    if (this._workspaces.length === 0) {
-      const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = '-- 無可用項目 --';
-      this._selectEl.appendChild(opt);
-      this._selectEl.disabled = true;
-      return;
     }
 
-    this._selectEl.disabled = false;
-    this._workspaces.forEach(ws => {
-      const opt = document.createElement('option');
-      opt.value = ws.id;
-      opt.textContent = ws.label;
-      if (ws.id === this._activeId) opt.selected = true;
-      this._selectEl.appendChild(opt);
-    });
-  }
+    _renderWorkspacesContent() {
+      const oldPanes = this._contentContainer.querySelectorAll('.workspace-pane');
+      oldPanes.forEach(pane => pane.remove());
 
-  _renderWorkspacesContent() {
-    const oldPanes = this._contentContainer.querySelectorAll('.workspace-pane');
-    oldPanes.forEach(pane => pane.remove());
-
-    if (this._workspaces.length === 0) {
-      this._emptyView.style.display = 'flex';
-      this._emptyView.textContent = '目前無可用共視項目';
-      return;
-    }
-
-    this._emptyView.style.display = 'none';
-
-    this._workspaces.forEach(ws => {
-      const pane = document.createElement('div');
-      pane.className = `workspace-pane ${ws.id === this._activeId ? 'active' : ''}`;
-      pane.dataset.id = ws.id;
-
-      if (ws.content instanceof HTMLElement) {
-        pane.appendChild(ws.content);
-      } else if (typeof ws.content === 'string') {
-        pane.innerHTML = ws.content;
-      } else {
-        pane.textContent = `[模組內容: ${ws.label}]`;
+      if (this._workspaces.length === 0) {
+        this._emptyView.style.display = 'flex';
+        this._emptyView.textContent = '目前無可用共視項目';
+        return;
       }
 
-      this._contentContainer.appendChild(pane);
-    });
-  }
+      this._emptyView.style.display = 'none';
 
-  _updatePanesActiveState() {
-    const panes = this._contentContainer.querySelectorAll('.workspace-pane');
-    panes.forEach(pane => {
-      if (pane.dataset.id === this._activeId) pane.classList.add('active');
-      else pane.classList.remove('active');
-    });
-  }
+      this._workspaces.forEach(ws => {
+        const pane = document.createElement('div');
+        pane.className = `workspace-pane ${ws.id === this._activeId ? 'active' : ''}`;
+        pane.dataset.id = ws.id;
 
-  _renderFavorites() {
-    this._favContainer.innerHTML = '';
-    const activeFavs = this._workspaces.filter(ws => this._favorites.includes(ws.id));
+        if (ws.content instanceof HTMLElement) {
+          pane.appendChild(ws.content);
+        } else if (typeof ws.content === 'string') {
+          pane.innerHTML = ws.content;
+        } else {
+          pane.textContent = `[模組內容: ${ws.label}]`;
+        }
 
-    if (activeFavs.length === 0) {
-      const placeholder = document.createElement('span');
-      placeholder.style.fontSize = '12px';
-      placeholder.style.color = 'var(--zizai-color-text-muted)';
-      placeholder.textContent = '（無常用工具）';
-      this._favContainer.appendChild(placeholder);
-      return;
+        this._contentContainer.appendChild(pane);
+      });
     }
 
-    activeFavs.forEach(ws => {
-      const chip = document.createElement('button');
-      chip.className = `favorite-chip ${ws.id === this._activeId ? 'active' : ''}`;
-      chip.textContent = ws.label;
-      chip.title = `切換至 ${ws.label}`;
-      chip.addEventListener('click', () => this.setActiveWorkspace(ws.id, 'user_action'));
-      this._favContainer.appendChild(chip);
-    });
-  }
-}
+    _updatePanesActiveState() {
+      const panes = this._contentContainer.querySelectorAll('.workspace-pane');
+      panes.forEach(pane => {
+        if (pane.dataset.id === this._activeId) pane.classList.add('active');
+        else pane.classList.remove('active');
+      });
+    }
 
-if (!customElements.get('zizai-right-panel')) {
-  customElements.define('zizai-right-panel', ZizaiRightPanel);
-}
+    _renderFavorites() {
+      this._favContainer.innerHTML = '';
+      const activeFavs = this._workspaces.filter(ws => this._favorites.includes(ws.id));
+
+      if (activeFavs.length === 0) {
+        const placeholder = document.createElement('span');
+        placeholder.style.fontSize = '12px';
+        placeholder.style.color = 'var(--zizai-color-text-muted)';
+        placeholder.textContent = '（無常用工具）';
+        this._favContainer.appendChild(placeholder);
+        return;
+      }
+
+      activeFavs.forEach(ws => {
+        const chip = document.createElement('button');
+        chip.className = `favorite-chip ${ws.id === this._activeId ? 'active' : ''}`;
+        chip.textContent = ws.label;
+        chip.title = `切換至 ${ws.label}`;
+        chip.addEventListener('click', () => this.setActiveWorkspace(ws.id, 'user_action'));
+        this._favContainer.appendChild(chip);
+      });
+    }
+  }
+
+  if (!customElements.get('zizai-right-panel')) {
+    customElements.define('zizai-right-panel', ZizaiRightPanel);
+  }
+})();
